@@ -18,10 +18,10 @@ const btnChallengeFriend = document.getElementById('btn-challenge-friend');
 const singlePlayerMenu = document.getElementById('single-player-menu');
 const btnPlayAsRed = document.getElementById('btn-play-as-red');
 const btnPlayAsBlue = document.getElementById('btn-play-as-blue');
-const difficultySelection = singlePlayerMenu.querySelector('.difficulty-selection');
+const difficultySelection = singlePlayerMenu ? singlePlayerMenu.querySelector('.difficulty-selection') : null;
 const difficultyHeader = document.getElementById('difficulty-header');
 const chosenAiColorSpan = document.getElementById('chosen-ai-color'); // Span to show chosen color
-const difficultyButtons = difficultySelection.querySelectorAll('button');
+const difficultyButtons = difficultySelection ? difficultySelection.querySelectorAll('button') : [];
 
 const onlineMenu = document.getElementById('online-menu');
 const btnShowCreateLobby = document.getElementById('btn-show-create-lobby'); // Button to open Create Lobby modal
@@ -43,129 +43,118 @@ const modalBackdrop = document.getElementById('modal-backdrop');
 
 // Create Lobby Modal
 const createLobbyModal = document.getElementById('create-lobby-modal');
-const btnCloseCreateLobby = createLobbyModal.querySelector('.close-btn'); // Close button inside modal
-const btnCancelCreateLobby = createLobbyModal.querySelector('.btn-cancel-create-lobby'); // Cancel button inside modal
-// Note: btn-create-lobby-submit-modal is inside the modal but handles form submission, not just closing.
+const btnCloseCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.close-btn') : null;
+const btnCancelCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.btn-cancel-create-lobby') : null;
 
 // Share Game Code Modal
 const shareGameCodeModal = document.getElementById('share-game-code-modal');
-const btnCloseShareCode = shareGameCodeModal.querySelector('.close-btn'); // Close button inside modal
-const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal'); // Cancel button inside modal
+const btnCloseShareCode = shareGameCodeModal ? shareGameCodeModal.querySelector('.close-btn') : null;
+const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal');
 
 
 // --- Game State Variables ---
-let currentGameMode = null; // 'ai', 'local', 'online'
-let currentPlayerColor = null; // For AI or online (this client's color)
+let currentGameMode = null;
+let currentPlayerColor = null;
 let currentAIDifficulty = null;
-let onlineGameSocket = null; // Reference to the connected socket for online games
-let onlineGameLobbyId = null; // Reference to the lobby ID for online games
+let onlineGameSocket = null;
+let onlineGameLobbyId = null;
 
 // DamaGame instance
 let damaGame;
 
 // --- Helper Functions (Callbacks for DamaGame to update UI) ---
 
-/**
- * Shows a specific screen and hides others.
- * @param {string} id - The ID of the screen to show (e.g., 'main-menu').
- */
 export function showScreen(id) {
+    console.log(`[showScreen] Attempting to show screen: ${id}`);
     screens.forEach(screen => {
+        if (screen.id === id) {
+            if (!screen.classList.contains('active')) {
+                console.log(`[showScreen] Activating screen: ${screen.id}`);
+            }
+        } else {
+            if (screen.classList.contains('active')) {
+                console.log(`[showScreen] Deactivating screen: ${screen.id}`);
+            }
+        }
         screen.classList.remove('active');
     });
-    document.getElementById(id).classList.add('active');
-    messageArea.textContent = ''; // Clear messages on screen change
-    turnIndicator.textContent = ''; // Clear turn indicator
-    turnIndicator.className = '';
-    btnUndo.style.display = 'none'; // Undo is specific to local games for now
-}
-
-/**
- * Displays a message to the user.
- * @param {string} message - The message to display.
- * @param {'green'|'red'|'blue'} type - Type of message for styling/color.
- */
-export function showMessage(message, type = 'blue') {
-    messageArea.textContent = message;
-    messageArea.style.color = type;
-}
-
-/**
- * Updates the turn indicator display. This is called by DamaGame.
- * @param {'red'|'blue'|'none'} color - The color whose turn it is, or 'none'.
- * @param {boolean} isOnline - Whether it's an online game.
- * @param {'red'|'blue'|null} myOnlineColor - The client's assigned color in online mode.
- */
-function updateTurnIndicator(color, isOnline = false, myOnlineColor = null) {
-    turnIndicator.className = color;
-    if (color === 'none') {
-        turnIndicator.textContent = '';
-        return;
-    }
-
-    if (isOnline) {
-        if (color === myOnlineColor) {
-            turnIndicator.textContent = `Your Turn (${Utils.capitalize(color)})`;
-        } else {
-            turnIndicator.textContent = `Opponent's Turn (${Utils.capitalize(color)})`;
-        }
+    const targetScreen = document.getElementById(id);
+    if (targetScreen) {
+        targetScreen.classList.add('active');
+        console.log(`[showScreen] Screen ${id} is now active and should be visible.`);
     } else {
-        turnIndicator.textContent = `${Utils.capitalize(color)}'s Turn`;
+        console.error(`[showScreen] ERROR: Target screen with ID '${id}' not found.`);
+    }
+    // Clear messages and turn indicator, but check if elements exist
+    if (messageArea) messageArea.textContent = '';
+    if (turnIndicator) {
+        turnIndicator.textContent = '';
+        turnIndicator.className = '';
+    }
+    if (btnUndo) btnUndo.style.display = 'none';
+}
+
+export function showMessage(message, type = 'blue') {
+    if (messageArea) {
+        messageArea.textContent = message;
+        messageArea.style.color = type;
     }
 }
 
-/**
- * Handles game end, displaying winner and options. This is called by DamaGame.
- * @param {'red'|'blue'|null} winner - The color of the winning player, or null for draw/forfeit.
- * @param {number} redPieces - Count of red pieces remaining.
- * @param {number} bluePieces - Count of blue pieces remaining.
- * @param {boolean} isOnline - If it was an online game.
- */
+function updateTurnIndicator(color, isOnline = false, myOnlineColor = null) {
+    if (turnIndicator) {
+        turnIndicator.className = color;
+        if (color === 'none') {
+            turnIndicator.textContent = '';
+            return;
+        }
+
+        if (isOnline) {
+            if (color === myOnlineColor) {
+                turnIndicator.textContent = `Your Turn (${Utils.capitalize(color)})`;
+            } else {
+                turnIndicator.textContent = `Opponent's Turn (${Utils.capitalize(color)})`;
+            }
+        } else {
+            turnIndicator.textContent = `${Utils.capitalize(color)}'s Turn`;
+        }
+    }
+}
+
 function handleGameEnd(winner, redPieces, bluePieces, isOnline) {
     showScreen('result-screen');
-    if (winner) {
-        winnerMessage.textContent = `${Utils.capitalize(winner)} Wins!`;
-        winnerMessage.style.color = winner;
-    } else {
-        winnerMessage.textContent = "Game Over (No Winner / Forfeit)";
-        winnerMessage.style.color = '#ccc';
+    if (winnerMessage) {
+        if (winner) {
+            winnerMessage.textContent = `${Utils.capitalize(winner)} Wins!`;
+            winnerMessage.style.color = winner;
+        } else {
+            winnerMessage.textContent = "Game Over (No Winner / Forfeit)";
+            winnerMessage.style.color = '#ccc';
+        }
     }
-    scoreMessage.textContent = `Red: ${redPieces} | Blue: ${bluePieces}`;
+    if (scoreMessage) scoreMessage.textContent = `Red: ${redPieces} | Blue: ${bluePieces}`;
 
-    // Rematch only for local/AI for now
-    btnRematch.style.display = isOnline ? 'none' : 'block';
+    if (btnRematch) btnRematch.style.display = isOnline ? 'none' : 'block';
 }
 
-/**
- * Controls visibility of the Undo button. Called by DamaGame.
- * @param {boolean} visible
- */
 function onUndoVisibility(visible) {
-    btnUndo.style.display = visible ? 'block' : 'none';
+    if (btnUndo) btnUndo.style.display = visible ? 'block' : 'none';
 }
 
 
-/**
- * Sets up and starts a new Dama game. This is called by main.js.
- * @param {'ai'|'local'|'online'} mode - Game mode.
- * @param {'red'|'blue'|null} playerColor - Player's chosen color (for AI/online).
- * @param {SocketIO.Socket|null} socket - Socket.IO instance for online games.
- * @param {string|null} lobbyId - Lobby ID for online games.
- * @param {Array<Array<string>>|null} initialBoardState - Board state for online game from server.
- * @param {'red'|'blue'|null} initialTurn - Initial turn for online game from server.
- */
 export function setupGame(mode, playerColor = null, socket = null, lobbyId = null, initialBoardState = null, initialTurn = null) {
+    console.log(`[setupGame] Starting game in mode: ${mode}, playerColor: ${playerColor}`);
     currentGameMode = mode;
     currentPlayerColor = playerColor;
     onlineGameSocket = socket;
     onlineGameLobbyId = lobbyId;
 
     showScreen('game-screen');
-    messageArea.textContent = '';
+    if (messageArea) messageArea.textContent = '';
 
     const config = {
         mode: mode,
-        playerColor: playerColor, // 'red' or 'blue' for AI/online, null for local 2-player
+        playerColor: playerColor,
         aiDifficulty: currentAIDifficulty,
         socket: onlineGameSocket,
         lobbyId: onlineGameLobbyId,
@@ -179,81 +168,98 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
 
     if (!damaGame) {
         damaGame = new DamaGame('board-container', config);
+        console.log('[setupGame] Initialized new DamaGame instance.');
     } else {
         damaGame.resetGame(config);
+        console.log('[setupGame] Reset existing DamaGame instance.');
     }
 
-    if (mode === 'online') {
-        // Listen for game:move from server
-        onlineGameSocket.off('game:move'); // Remove previous listener to avoid duplicates
+    if (mode === 'online' && onlineGameSocket) {
+        onlineGameSocket.off('game:move');
         onlineGameSocket.on('game:move', (payload) => {
             if (payload.lobbyId === onlineGameLobbyId) {
-                console.log('Received game:move from server:', payload);
-                // DamaGame instance applies the server move
-                damaGame.applyServerMove(payload.board, payload.currentTurn, payload.redPiecesCount, payload.bluePiecesCount);
+                console.log('[Online] Received game:move from server:', payload);
+                if (damaGame) damaGame.applyServerMove(payload.board, payload.currentTurn, payload.redPiecesCount, payload.bluePiecesCount);
             }
         });
     }
 }
 
-// --- MODAL Control Functions (NEW) ---
-
-/**
- * Shows a generic modal and the backdrop.
- * @param {HTMLElement} modalElement - The specific modal element to show.
- */
 function showModal(modalElement) {
+    console.log(`[showModal] Attempting to show modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.add('show');
         modalElement.classList.add('show');
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
+        console.log(`[showModal] Modal ${modalElement.id} and backdrop shown.`);
+    } else {
+        console.warn("[showModal] Missing modalBackdrop or modalElement. Cannot show modal.");
     }
 }
 
-/**
- * Hides a generic modal and the backdrop.
- * @param {HTMLElement} modalElement - The specific modal element to hide.
- */
 function hideModal(modalElement) {
+    console.log(`[hideModal] Attempting to hide modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.remove('show');
         modalElement.classList.remove('show');
-        // Only re-enable scrolling if no other modal is open
         if (!document.querySelector('.modal.show')) {
             document.body.style.overflow = '';
         }
+        console.log(`[hideModal] Modal ${modalElement.id} and backdrop hidden.`);
     }
 }
 
-// Specific functions for your 'Create Lobby' modal
 export function showCreateLobbyModal() {
+    console.log("[showCreateLobbyModal] Called.");
+    hideShareGameCodeModal(); // Ensure other modals are closed
     showModal(createLobbyModal);
-    // Any specific setup for create lobby modal (e.g., clearing inputs) can go here
 }
 
 export function hideCreateLobbyModal() {
+    console.log("[hideCreateLobbyModal] Called.");
     hideModal(createLobbyModal);
-    // Any specific cleanup for create lobby modal can go here
 }
 
-// Specific functions for your 'Share Game Code' modal
 export function showShareGameCodeModal() {
+    console.log("[showShareGameCodeModal] Called.");
+    hideCreateLobbyModal(); // Ensure other modals are closed
     showModal(shareGameCodeModal);
-    // Any specific setup for share game code modal (e.g., displaying the code) can go here
 }
 
 export function hideShareGameCodeModal() {
+    console.log("[hideShareGameCodeModal] Called.");
     hideModal(shareGameCodeModal);
-    // Any specific cleanup for share game code modal can go here
 }
 
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Initializing DamaGame here, but calling resetGame() when modes are selected
-    // This ensures the board container and event listeners are set up once
+    console.log('--- [main.js] DOMContentLoaded fired, starting initialization ---');
+
+    // **IMPORTANT ADDITION: Reset all modals at startup**
+    if (modalBackdrop) modalBackdrop.classList.remove('show');
+    if (createLobbyModal) createLobbyModal.classList.remove('show');
+    if (shareGameCodeModal) shareGameCodeModal.classList.remove('show');
+    document.body.style.overflow = ''; // Ensure body scrolling is re-enabled
+    console.log('[DOMContentLoaded] All modals reset to hidden state.');
+
+
+    console.log('Elements found status:');
+    console.log('  mainMenu:', !!mainMenu);
+    console.log('  btnSinglePlayer:', !!btnSinglePlayer);
+    console.log('  btnTwoPlayer:', !!btnTwoPlayer);
+    console.log('  btnChallengeFriend:', !!btnChallengeFriend);
+    console.log('  singlePlayerMenu:', !!singlePlayerMenu);
+    console.log('  onlineMenu:', !!onlineMenu);
+    console.log('  gameScreen:', !!gameScreen);
+    console.log('  resultScreen:', !!resultScreen);
+    console.log('  modalBackdrop:', !!modalBackdrop);
+    console.log('  createLobbyModal:', !!createLobbyModal);
+    console.log('  shareGameCodeModal:', !!shareGameCodeModal);
+
+
     damaGame = new DamaGame('board-container', {
-        mode: null, // No active mode initially
+        mode: null,
         playerColor: null,
         aiDifficulty: null,
         socket: null,
@@ -263,146 +269,190 @@ document.addEventListener('DOMContentLoaded', () => {
         onMessage: showMessage,
         onUndoVisibility: onUndoVisibility
     });
+    console.log('[DOMContentLoaded] DamaGame initialized (initial state).');
 
-    showScreen('main-menu'); // Start on main menu
+    showScreen('main-menu');
+    console.log('[DOMContentLoaded] Displaying main-menu.');
 
     // Main Menu Buttons
-    btnSinglePlayer.addEventListener('click', () => {
-        showScreen('single-player-menu');
-        difficultySelection.style.display = 'none'; // Hide difficulty until color chosen
-        chosenAiColorSpan.textContent = ''; // Clear AI color display
-    });
+    if (btnSinglePlayer) {
+        btnSinglePlayer.addEventListener('click', () => {
+            console.log('[Click] "Single Player (AI)" button clicked. Showing single-player-menu.');
+            showScreen('single-player-menu');
+            // Ensure any open modals are hidden when transitioning to a new screen
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+            if (difficultySelection) difficultySelection.style.display = 'none';
+            if (chosenAiColorSpan) chosenAiColorSpan.textContent = '';
+        });
+    } else { console.error("ERROR: btnSinglePlayer not found! Cannot attach click listener."); }
 
-    btnTwoPlayer.addEventListener('click', () => {
-        // For local 2-player, humanPlayerColor is not strictly needed but can default to Blue (bottom)
-        setupGame('local', Utils.PLAYER_BLUE);
-    });
+    if (btnTwoPlayer) {
+        btnTwoPlayer.addEventListener('click', () => {
+            console.log('[Click] "2 Players (Local)" button clicked. Setting up local game.');
+            // Ensure any open modals are hidden when transitioning to a new screen
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+            setupGame('local', Utils.PLAYER_BLUE);
+        });
+    } else { console.error("ERROR: btnTwoPlayer not found! Cannot attach click listener."); }
 
-    btnChallengeFriend.addEventListener('click', () => {
-        showScreen('online-menu');
-        initLobbyUI(updateConnectionStatus); // Initialize lobby UI logic
-        if (isSocketConnected()) {
-            // Already connected, show lobby section
-            onlineMenu.querySelector('.online-setup-section').style.display = 'none';
-            document.getElementById('lobby-section').style.display = 'block';
-            getSocket().emit('lobby:list:fetch');
-        } else {
-            // Not connected, show connection form
-            onlineMenu.querySelector('.online-setup-section').style.display = 'flex';
-            document.getElementById('lobby-section').style.display = 'none';
-        }
-    });
+    if (btnChallengeFriend) {
+        btnChallengeFriend.addEventListener('click', () => {
+            console.log('[Click] "Challenge a Friend (Online)" button clicked. Showing online-menu.');
+            // Ensure any open modals are hidden when transitioning to a new screen
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+            showScreen('online-menu');
+            initLobbyUI(updateConnectionStatus);
+            if (isSocketConnected()) {
+                if (onlineMenu) onlineMenu.querySelector('.online-setup-section').style.display = 'none';
+                const lobbySection = document.getElementById('lobby-section');
+                if (lobbySection) lobbySection.style.display = 'block';
+                getSocket().emit('lobby:list:fetch');
+            } else {
+                if (onlineMenu) onlineMenu.querySelector('.online-setup-section').style.display = 'flex';
+                const lobbySection = document.getElementById('lobby-section');
+                if (lobbySection) lobbySection.style.display = 'none';
+            }
+        });
+    } else { console.error("ERROR: btnChallengeFriend not found! Cannot attach click listener."); }
 
     // Single Player Menu
-    btnPlayAsRed.addEventListener('click', () => {
-        currentPlayerColor = Utils.PLAYER_RED;
-        chosenAiColorSpan.textContent = Utils.capitalize(Utils.PLAYER_BLUE); // AI is opponent
-        difficultySelection.style.display = 'flex';
-    });
-
-    btnPlayAsBlue.addEventListener('click', () => {
-        currentPlayerColor = Utils.PLAYER_BLUE;
-        chosenAiColorSpan.textContent = Utils.capitalize(Utils.PLAYER_RED); // AI is opponent
-        difficultySelection.style.display = 'flex';
-    });
-
-    difficultyButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            currentAIDifficulty = button.dataset.difficulty;
-            if (!currentPlayerColor) {
-                showMessage("Please choose your color first!", 'red');
-                return;
-            }
-            setupGame('ai', currentPlayerColor);
+    if (btnPlayAsRed) {
+        btnPlayAsRed.addEventListener('click', () => {
+            console.log('[Click] "Play as Red" button clicked.');
+            currentPlayerColor = Utils.PLAYER_RED;
+            if (chosenAiColorSpan) chosenAiColorSpan.textContent = Utils.capitalize(Utils.PLAYER_BLUE);
+            if (difficultySelection) difficultySelection.style.display = 'flex';
         });
-    });
+    } else { console.warn("WARN: btnPlayAsRed not found."); }
+
+    if (btnPlayAsBlue) {
+        btnPlayAsBlue.addEventListener('click', () => {
+            console.log('[Click] "Play as Blue" button clicked.');
+            currentPlayerColor = Utils.PLAYER_BLUE;
+            if (chosenAiColorSpan) chosenAiColorSpan.textContent = Utils.capitalize(Utils.PLAYER_RED);
+            if (difficultySelection) difficultySelection.style.display = 'flex';
+        });
+    } else { console.warn("WARN: btnPlayAsBlue not found."); }
+
+    if (difficultyButtons && difficultyButtons.length > 0) {
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                console.log(`[Click] Difficulty button (${button.dataset.difficulty}) clicked.`);
+                currentAIDifficulty = button.dataset.difficulty;
+                if (!currentPlayerColor) {
+                    showMessage("Please choose your color first!", 'red');
+                    return;
+                }
+                setupGame('ai', currentPlayerColor);
+            });
+        });
+    } else { console.warn("WARN: Difficulty buttons not found or empty."); }
 
     // Back to Menu Buttons
     document.querySelectorAll('.back-button').forEach(button => {
         button.addEventListener('click', () => {
-            // If leaving online menu (by clicking a back button from within online-menu)
-            if (onlineMenu.classList.contains('active')) {
-                leaveOnlineLobbyConnection(); // Correctly calls the exported function to handle leaving lobby
-            }
-            showScreen('main-menu'); // Transition to main menu
-            currentGameMode = null; // Clear game mode
-            currentPlayerColor = null; // Clear player color
-        });
-    });
-
-    btnBackToMenuGame.addEventListener('click', () => {
-        if (confirm('Are you sure you want to abandon the current game?')) {
-            if (currentGameMode === 'online' && isSocketConnected()) {
-                getSocket().emit('lobby:leave'); // Leave online lobby
-                disconnectSocket(); // Disconnect from server
+            console.log('[Click] Generic "Back to Menu" button clicked.');
+            if (onlineMenu && onlineMenu.classList.contains('active')) {
+                leaveOnlineLobbyConnection();
             }
             showScreen('main-menu');
             currentGameMode = null;
             currentPlayerColor = null;
-        }
+            // Ensure any open modals are hidden when returning to main menu
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+        });
     });
 
+    if (btnBackToMenuGame) {
+        btnBackToMenuGame.addEventListener('click', () => {
+            console.log('[Click] "Back to Menu" (from game) button clicked. Confirming abandon.');
+            if (confirm('Are you sure you want to abandon the current game?')) {
+                if (currentGameMode === 'online' && isSocketConnected()) {
+                    getSocket().emit('lobby:leave');
+                    disconnectSocket();
+                }
+                showScreen('main-menu');
+                currentGameMode = null;
+                currentPlayerColor = null;
+                // Ensure any open modals are hidden
+                hideCreateLobbyModal();
+                hideShareGameCodeModal();
+            }
+        });
+    } else { console.warn("WARN: btnBackToMenuGame not found."); }
 
     // Result Screen Buttons
-    btnRematch.addEventListener('click', () => {
-        // Rematch logic based on current game mode
-        if (currentGameMode === 'ai') {
-            setupGame('ai', currentPlayerColor);
-        } else if (currentGameMode === 'local') {
-            setupGame('local', Utils.PLAYER_BLUE); // Local 2-player restarts with Blue as bottom player
-        }
-    });
+    if (btnRematch) {
+        btnRematch.addEventListener('click', () => {
+            console.log('[Click] "Rematch" button clicked.');
+            if (currentGameMode === 'ai') {
+                setupGame('ai', currentPlayerColor);
+            } else if (currentGameMode === 'local') {
+                setupGame('local', Utils.PLAYER_BLUE);
+            }
+        });
+    } else { console.warn("WARN: btnRematch not found."); }
 
-    btnNewGame.addEventListener('click', () => {
-        if (currentGameMode === 'online' && isSocketConnected()) {
-            getSocket().emit('lobby:leave'); // Ensure to leave any online lobby
-            disconnectSocket();
-        }
-        showScreen('main-menu');
-        currentGameMode = null;
-        currentPlayerColor = null;
-    });
+    if (btnNewGame) {
+        btnNewGame.addEventListener('click', () => {
+            console.log('[Click] "New Game" button clicked.');
+            if (currentGameMode === 'online' && isSocketConnected()) {
+                getSocket().emit('lobby:leave');
+                disconnectSocket();
+            }
+            showScreen('main-menu');
+            currentGameMode = null;
+            currentPlayerColor = null;
+            // Ensure any open modals are hidden
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+        });
+    } else { console.warn("WARN: btnNewGame not found."); }
 
     // Undo button
-    btnUndo.addEventListener('click', () => {
-        damaGame.undoLastMove();
-    });
+    if (btnUndo) {
+        btnUndo.addEventListener('click', () => {
+            console.log('[Click] "Undo" button clicked.');
+            if (damaGame) damaGame.undoLastMove();
+        });
+    } else { console.warn("WARN: btnUndo not found."); }
 
     // --- MODAL Event Listeners (NEW) ---
 
-    // Event listener for opening the 'Create Lobby' modal
     if (btnShowCreateLobby) {
         btnShowCreateLobby.addEventListener('click', showCreateLobbyModal);
-    }
+    } else { console.warn("WARN: btnShowCreateLobby not found!"); }
 
-    // Event listeners for closing the 'Create Lobby' modal
     if (btnCloseCreateLobby) {
         btnCloseCreateLobby.addEventListener('click', hideCreateLobbyModal);
-    }
+    } else { console.warn("WARN: btnCloseCreateLobby not found!"); }
+
     if (btnCancelCreateLobby) {
         btnCancelCreateLobby.addEventListener('click', hideCreateLobbyModal);
-    }
+    } else { console.warn("WARN: btnCancelCreateLobby not found!"); }
 
-    // Event listeners for closing the 'Share Game Code' modal
     if (btnCloseShareCode) {
         btnCloseShareCode.addEventListener('click', hideShareGameCodeModal);
-    }
+    } else { console.warn("WARN: btnCloseShareCode not found!"); }
+
     if (cancelOnlineGameModal) {
         cancelOnlineGameModal.addEventListener('click', hideShareGameCodeModal);
-    }
+    } else { console.warn("WARN: cancelOnlineGameModal not found!"); }
 
-    // Event listener for clicking on the backdrop to close any open modal
     if (modalBackdrop) {
-        modalBackdrop.addEventListener('click', (event) => { // Corrected: modalBackrop -> modalBackdrop
-            // Only close if the click is directly on the backdrop, not on a modal itself
+        modalBackdrop.addEventListener('click', (event) => {
             if (event.target === modalBackdrop) {
+                console.log('[Click] Modal backdrop clicked directly.');
                 if (createLobbyModal && createLobbyModal.classList.contains('show')) {
                     hideCreateLobbyModal();
                 } else if (shareGameCodeModal && shareGameCodeModal.classList.contains('show')) {
                     hideShareGameCodeModal();
                 }
-                // Add more conditions here for any other modals you might add
             }
         });
-    }
+    } else { console.warn("WARN: modalBackdrop not found!"); }
 });

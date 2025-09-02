@@ -686,3 +686,60 @@ button.back-button:hover {
     .modal { padding: 1em; } /* Adjusted padding */
     .modal h4 { font-size: 1.3em;}
 }
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    display: none; /* Crucial: Hide all screens by default */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    transform: translateX(100%);
+    opacity: 0;
+    z-index: 10;
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    pointer-events: none; /* Crucial: No pointer events for inactive screens */
+}
+
+.screen.active {
+    display: flex; /* Crucial: Show active screen with flex */
+    transform: translateX(0);
+    opacity: 1;
+    z-index: 20;
+    pointer-events: auto; /* Crucial: Enable pointer events for active screen */
+}
+
+/* ... (rest of your CSS including modal styles) ... */
+
+.modal-backdrop {
+    /* ... */
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    pointer-events: none; /* Ensure backdrop is not clickable by default */
+}
+
+.modal-backdrop.show {
+    opacity: 1;
+    pointer-events: auto; /* Only clickable when shown */
+}
+
+.modal {
+    /* ... */
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    pointer-events: none; /* Ensure modal is not clickable by default */
+}
+
+.modal.show {
+    opacity: 1;
+    pointer-events: auto; /* Only clickable when shown */
+}
