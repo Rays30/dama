@@ -1,0 +1,36 @@
+# Node.js dependencies
+node_modules/
+/server/node_modules/ # Explicitly ignore server's node_modules
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# VS Code specific files (except for settings.json and extensions.json if you want to share them)
+.vscode/*
+!.vscode/settings.json    # Keep settings.json if you want to share common project settings
+!.vscode/extensions.json  # Keep extensions.json if you want to share recommended extensions
+
+# Compiled output or temporary directories
+/dist/
+/build/
+/tmp/
+
+# Editor backup/temp files
+*.swp
+*~
+.#*

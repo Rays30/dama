@@ -1,0 +1,598 @@
+:root {
+    --board-size: 640px; /* Default desktop size */
+    --square-size: 80px; /* This will be dynamically overridden by JS for responsive board */
+    --piece-size: 64px; /* This will be dynamically overridden by JS for responsive board */
+    --red-color: #B22222; /* Firebrick */
+    --blue-color: #4682B4; /* Steelblue */
+    --dark-square: #7F5539; /* Brown stone */
+    --light-square: #CDB48F; /* Light stone */
+    --highlight-color: rgba(255, 255, 0, 0.7); /* Yellow for moves */
+    --capture-highlight-color: rgba(255, 0, 0, 0.7); /* Red for captures */
+    --selected-border: 4px solid #00F; /* Blue border for selected piece */
+    --king-color: gold;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #2c3e50; /* Dark background */
+    margin: 0;
+    overflow-x: hidden;
+    color: #ecf0f1;
+}
+
+#game-container {
+    padding: 15px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    width: 100vw;
+    min-height: 100vh; /* Allow it to take full height but also expand */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Titles */
+h1 {
+    color: #e74c3c;
+    margin: 10px 0 20px 0;
+    font-size: 2.5em;
+}
+
+h2 {
+    color: #ecf0f1;
+    margin-bottom: 20px;
+    font-size: 2em;
+}
+
+/* Screen transitions */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #34495e;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    transform: translateX(100%);
+    opacity: 0;
+    z-index: 10;
+    padding: 20px;
+    box-sizing: border-box;
+    border-radius: 10px;
+}
+
+.screen.active {
+    transform: translateX(0);
+    opacity: 1;
+    z-index: 20;
+}
+
+.screen:not(.active) {
+    pointer-events: none;
+}
+
+/* Menu screens - made to act as cards centered on the body background */
+#main-menu, #single-player-menu, #online-menu, #result-screen {
+    background-color: #34495e;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    max-width: 680px;
+    width: 95vw;
+    min-height: 50vh;
+    margin: 20px auto;
+    position: relative; /* Change from absolute to relative for normal flow within #game-container */
+    opacity: 1;
+    transform: none;
+    /* These specific screen styles also need to override the default .screen display:flex */
+    /* Handled by JS adding/removing 'active' class */
+}
+
+/* Override .screen properties for stacking behavior within #game-container */
+/* Only the active screen should be displayed, others hidden with display:none by JS */
+#main-menu.screen, #single-player-menu.screen, #online-menu.screen, #result-screen.screen {
+    position: static; /* Allows stacking in normal flow within game-container */
+    transform: none; /* Reset transform from .screen */
+    opacity: 1; /* Keep visible if JS controls display:none */
+    display: none; /* Hidden by default until JS adds 'active' */
+}
+
+#main-menu.screen.active, #single-player-menu.screen.active, #online-menu.screen.active, #result-screen.screen.active {
+    display: flex; /* Only active screen is displayed */
+    animation: fade-in 0.5s forwards; /* Add fade-in animation */
+}
+
+/* For game-screen, keep absolute positioning for full overlay */
+#game-screen.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #34495e;
+    /* No box-shadow/border-radius here if you want board to feel 'floating' */
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Buttons */
+button {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    margin: 10px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    min-width: 180px;
+    width: 80%;
+    max-width: 300px;
+    box-sizing: border-box;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+button:hover {
+    background-color: #2ecc71;
+    transform: scale(1.05);
+}
+
+button.back-button {
+    background-color: #7f8c8d;
+}
+button.back-button:hover {
+    background-color: #95a5a6;
+}
+
+#btn-undo {
+    background-color: #f39c12;
+    min-width: unset;
+    padding: 8px 15px;
+    font-size: 0.9em;
+}
+#btn-undo:hover {
+    background-color: #f1c40f;
+}
+
+/* Game info bar */
+#game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    color: #ecf0f1;
+    font-weight: bold;
+    font-size: 1.2em;
+    padding: 0 5px;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+#turn-indicator {
+    padding: 5px 10px;
+    border-radius: 5px;
+    min-width: 100px;
+    text-align: center;
+    flex-shrink: 0;
+    font-weight: bold;
+}
+#turn-indicator.red { background-color: var(--red-color); }
+#turn-indicator.blue { background-color: var(--blue-color); }
+
+#message-area {
+    flex-grow: 1;
+    text-align: center;
+    margin: 0 5px;
+    color: #e74c3c;
+    min-width: 150px;
+}
+
+/* Board */
+#board-container {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr); /* Use fractions for dynamic square sizing */
+    grid-template-rows: repeat(8, 1fr);
+    width: 90vmin; /* Responsive width based on viewport min dimension */
+    height: 90vmin; /* Keep it square */
+    border: 4px solid #5a3c26;
+    box-sizing: border-box;
+    margin: auto;
+    position: relative;
+    gap: 1px;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+/* Board squares */
+.square {
+    /* `1fr` in grid-template-columns/rows makes squares responsive */
+    position: relative;
+    background-size: cover;
+    /* Removed fixed width/height for squares, let grid handle it */
+}
+
+.square.dark {
+    background-color: var(--dark-square);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+}
+
+.square.light {
+    background-color: var(--light-square);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+}
+
+/* Pieces */
+.piece {
+    /* Piece size relative to square, centered via JS transform */
+    width: 80%; /* e.g., 80% of its parent square */
+    height: 80%;
+    border-radius: 50%;
+    position: absolute; /* Keep absolute so JS can manipulate transform */
+    cursor: grab;
+    transition: transform 0.3s ease-in-out, border 0.1s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Default centering, overridden by JS for pixel-perfect positioning */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); 
+}
+
+.piece.red {
+    background-color: var(--red-color);
+    border: 3px solid #8e1c1c;
+}
+
+.piece.blue {
+    background-color: var(--blue-color);
+    border: 3px solid #3a6c95;
+}
+
+.piece.selected {
+    border: var(--selected-border);
+    transform: translate(-50%, -50%) scale(1.1); /* Combined transform */
+    cursor: grabbing;
+    z-index: 101;
+}
+
+.piece.king::after {
+    content: 'K';
+    font-size: 2.2em;
+    font-weight: bold;
+    color: var(--king-color);
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* Highlights */
+.highlight {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: var(--highlight-color);
+    border-radius: 50%;
+    transform: scale(0.6);
+    opacity: 0.8;
+    z-index: 50;
+    transition: transform 0.1s ease-out;
+}
+
+.highlight.capture {
+    background-color: var(--capture-highlight-color);
+    animation: pulse-red 1s infinite alternate;
+}
+
+@keyframes pulse-red {
+    from { transform: scale(0.6); opacity: 0.8; }
+    to { transform: scale(0.7); opacity: 1; }
+}
+
+/* Online menu specific styles for inputs, etc. */
+#online-menu .online-setup-section,
+#online-menu .sub-section {
+    background-color: #4a6a8a;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    width: 95%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#online-menu label {
+    display: block;
+    margin: 10px 0 5px 0;
+    font-weight: bold;
+    color: #ecf0f1;
+    width: 100%;
+    text-align: left;
+}
+
+#online-menu input[type="text"],
+#online-menu input[type="password"],
+#online-menu select {
+    padding: 10px;
+    margin: 5px 0;
+    width: 100%;
+    border: 1px solid #7f8c8d;
+    border-radius: 5px;
+    font-size: 1em;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    box-sizing: border-box;
+}
+
+#online-menu select { height: 38px; }
+
+#online-menu button {
+    margin-top: 10px;
+    width: auto;
+    min-width: 120px;
+    padding: 10px 20px;
+    font-size: 1em;
+}
+
+#connection-status {
+    font-size: 0.9em;
+    margin-top: 10px;
+    color: #bdc3c7;
+}
+
+#lobby-list {
+    background-color: #2c3e50;
+    border: 1px solid #5a6a7a;
+    border-radius: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding: 10px;
+    text-align: left;
+    width: 95%;
+    max-width: 450px;
+}
+
+#online-menu hr {
+    width: 95%;
+    border: none;
+    border-top: 1px solid #5a6a7a;
+    margin: 15px 0;
+}
+
+.online-explanation {
+    max-width: 95%;
+    font-size: 0.9em;
+    color: #bdc3c7;
+    margin-bottom: 15px;
+}
+
+.lobby-item {
+    background-color: #34495e;
+    border: 1px solid #5a6a7a;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.lobby-item:hover { background-color: #4a6a8a; }
+
+.lobby-item span { flex-grow: 1; text-align: left; }
+.lobby-item .player-count { font-weight: bold; margin-left: 10px; }
+.lobby-item .lobby-status { font-size: 0.8em; color: #bdc3c7; margin-left: 10px; }
+
+#current-lobby-details h5 { margin: 10px 0 5px 0; }
+#lobby-details-players {
+    list-style-type: none;
+    padding: 0;
+    width: 100%;
+}
+#lobby-details-players li {
+    background-color: #2c3e50;
+    padding: 8px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.color-selection, .difficulty-selection {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 450px;
+}
+
+.color-selection button {
+    margin: 5px;
+    padding: 10px 20px;
+    font-size: 1em;
+    min-width: 150px;
+}
+#btn-play-as-red { background-color: var(--red-color); }
+#btn-play-as-red:hover { background-color: #d63d3d; }
+#btn-play-as-blue { background-color: var(--blue-color); }
+#btn-play-as-blue:hover { background-color: #65a1d3; }
+
+.ready-button.ready { background-color: #2ecc71; }
+.ready-button.ready:hover { background-color: #27ae60; }
+.ready-button.not-ready { background-color: #e67e22; }
+.ready-button.not-ready:hover { background-color: #d35400; }
+
+#difficulty-header {
+    margin: 10px 0 15px 0;
+    color: #ecf0f1;
+}
+
+/* --- Modal Styles --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Above all other content */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background-color: #34495e;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    padding: 25px;
+    max-width: 90vw;
+    width: 450px;
+    position: relative;
+    transform: translateY(-50px); /* Start slightly above center */
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.modal.active {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.modal-content {
+    width: 100%;
+    text-align: center;
+}
+
+.modal-content h4 {
+    color: #ecf0f1;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.modal-content p {
+    margin-bottom: 15px;
+    color: #bdc3c7;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="password"],
+.modal-content select {
+    width: calc(100% - 20px); /* Adjust for padding within modal content */
+    margin-bottom: 15px;
+}
+
+.modal-content button {
+    width: auto;
+    min-width: 150px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #ecf0f1;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    min-width: unset;
+    width: auto;
+    box-shadow: none;
+    transform: none;
+    margin: 0;
+}
+
+.modal-close-button:hover {
+    color: #e74c3c;
+    background: none;
+    transform: rotate(90deg);
+}
+
+
+/* Media Queries */
+@media (max-width: 768px) {
+    :root {
+        --board-size: 360px;
+    }
+    
+    #game-container { width: 98vw; padding: 10px; }
+    h1 { font-size: 1.8em; margin-bottom: 10px; }
+    h2 { font-size: 1.5em; }
+    #game-info { font-size: 1em; padding: 0; }
+    #turn-indicator, #message-area, #btn-undo { margin: 5px auto; }
+    #board-container { max-width: 90vw; height: 90vw; border-width: 2px; margin: 10px auto; } /* Use vw for board as well */
+    .square { width: 100%; height: 100%; } /* Let grid handle sizing */
+    .piece { width: 70%; height: 70%; } /* Adjust piece size */
+    button { padding: 10px 15px; font-size: 0.9em; margin: 8px; min-width: 120px; }
+    .piece.king::after { font-size: 1.8em; }
+    #online-menu .online-setup-section,
+    #online-menu .sub-section,
+    #lobby-list,
+    #online-menu hr,
+    .online-explanation {
+        width: 100%;
+        max-width: 100%;
+    }
+    .modal {
+        width: 95vw;
+        max-width: 350px; /* Smaller max-width for modals on small screens */
+        padding: 15px;
+    }
+    .modal-content h4 { font-size: 1.5em; margin-bottom: 15px;}
+}
+
+@media (max-width: 480px) {
+    :root {
+        --board-size: 280px;
+    }
+    h1 { font-size: 1.5em; }
+    h2 { font-size: 1.2em; }
+    .piece.king::after { font-size: 1.5em; }
+    #game-info { font-size: 0.9em; flex-direction: column; }
+    #btn-undo { margin-top: 10px; }
+    .modal { padding: 10px; }
+    .modal-content h4 { font-size: 1.3em;}
+}
