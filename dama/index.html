@@ -6,8 +6,8 @@
     <title>Dama Game</title>
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <!-- Main Stylesheet (imports all others) -->
-    <link rel="stylesheet" href="../styles/main.css">
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="style.css">
     <!-- FIX: Add a favicon link to prevent 404 error -->
     <link rel="icon" href="/favicon.ico">
 </head>
@@ -15,6 +15,7 @@
     <div id="game-container">
         <h1>Dama Game</h1>
 
+        <!-- Main Menu -->
         <div id="main-menu" class="screen active">
             <h2>Select Game Mode</h2>
             <button id="btn-single-player">Single Player (AI)</button>
@@ -22,6 +23,7 @@
             <button id="btn-challenge-friend">Challenge a Friend (Online)</button>
         </div>
 
+        <!-- Single Player Menu -->
         <div id="single-player-menu" class="screen">
             <h2>Single Player Setup</h2>
             <div class="color-selection">
@@ -30,12 +32,13 @@
                 <button id="btn-play-as-blue" data-player-color="blue">Play as Blue</button>
             </div>
             <div class="difficulty-selection">
-                <h3 id="difficulty-header">Choose Difficulty (Playing as <span id="chosen-ai-color"></span>):</h3>
+                <h3 id="difficulty-header">
+                    Choose Difficulty (Playing as <span id="chosen-ai-color"></span>):
+                </h3>
                 <button data-difficulty="easy">Easy</button>
                 <button data-difficulty="medium">Medium</button>
                 <button data-difficulty="hard">Hard</button>
             </div>
-
             <button class="back-button">Back to Menu</button>
         </div>
 
@@ -70,8 +73,6 @@
 
                 <button id="btn-show-create-lobby">Create New Game</button>
 
-                <!-- OLD create-lobby-form and create-game-section ARE MOVED TO SEPARATE MODALS BELOW -->
-
                 <hr>
 
                 <div id="join-lobby-form" class="sub-section" style="display: none;">
@@ -86,16 +87,17 @@
             <div id="current-lobby-details" class="sub-section" style="display: none;">
                 <h4><span id="lobby-details-name"></span> (<span id="lobby-details-status"></span>)</h4>
                 <p>Host: <span id="lobby-details-host"></span></p>
-                <p id="lobby-details-code-area" style="display: none;">Share code: <input type="text" id="lobby-details-code" readonly><button id="copy-lobby-code">Copy</button></p>
+                <p id="lobby-details-code-area" style="display: none;">
+                    Share code: <input type="text" id="lobby-details-code" readonly>
+                    <button id="copy-lobby-code">Copy</button>
+                </p>
                 <h5>Players:</h5>
-                <ul id="lobby-details-players">
-                    <!-- Player list will be rendered here -->
-                </ul>
+                <ul id="lobby-details-players"></ul>
                 <button id="btn-ready-toggle" class="ready-button">Ready</button>
                 <button id="btn-start-game-host" class="host-button" style="display: none;">Start Game</button>
                 <button id="btn-leave-lobby">Leave Lobby</button>
 
-                <!-- Kick player functionality (only for host) -->
+                <!-- Host controls -->
                 <div id="host-controls" style="display: none; margin-top: 15px; border-top: 1px dashed #5a6a7a; padding-top: 10px;">
                     <h5>Host Controls:</h5>
                     <select id="kick-player-select"></select>
@@ -105,27 +107,27 @@
             </div>
         </div>
 
+        <!-- Game Screen -->
         <div id="game-screen" class="screen">
             <div id="game-info">
                 <div id="turn-indicator"></div>
                 <div id="message-area"></div>
                 <button id="btn-undo" style="display: none;">Undo</button>
             </div>
-            <!-- The board.css styles will apply to this container -->
             <div id="board-container" class="board"></div>
             <button id="btn-back-to-menu">Back to Menu</button>
         </div>
 
+        <!-- Result Screen -->
         <div id="result-screen" class="screen">
             <h2 id="winner-message"></h2>
             <p id="score-message"></p>
             <button id="btn-rematch">Rematch</button>
             <button id="btn-new-game">New Game</button>
         </div>
-    </div>
+    </div> <!-- ✅ closes #game-container properly -->
 
     <!-- Modals for Online Play -->
-    <!-- The modal-backdrop will appear behind all modals -->
     <div id="modal-backdrop" class="modal-backdrop"></div>
 
     <!-- Create Lobby Modal -->
