@@ -1,0 +1,22 @@
+/* styles/components/animations.css */
+
+/* Modal fade-in */
+.modal, .modal-backdrop {
+  opacity: 0;
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.modal.show, .modal-backdrop.show {
+  opacity: 1;
+}
+
+/* Piece movement */
+.piece {
+  transition: transform 0.3s ease;
+}
+
+/* Hover highlight on squares */
+.square:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

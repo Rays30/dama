@@ -1,0 +1,14 @@
+/* styles/variables.css */
+
+:root {
+  /* Colors */
+  --bg-dark: #1a202c;
+  --bg-panel: rgba(26, 32, 44, 0.8);
+  --accent: #38a169;
+  --accent-highlight: #dd6b20;
+  --text-light: #edf2f7;
+
+  /* Font family variables */
+  --font-body: 'Poppins', sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+}

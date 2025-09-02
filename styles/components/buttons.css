@@ -1,0 +1,23 @@
+/* styles/components/buttons.css */
+
+button, .button {
+  background-color: var(--accent);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  padding: 0.75em 1.5em;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.25s ease;
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+button:hover, .button:hover {
+  background-color: var(--accent-highlight);
+}
+
+button:focus, .button:focus {
+  outline: 2px solid var(--accent-highlight);
+  outline-offset: 2px;
+}

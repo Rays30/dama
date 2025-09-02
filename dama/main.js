@@ -24,6 +24,7 @@ const chosenAiColorSpan = document.getElementById('chosen-ai-color'); // Span to
 const difficultyButtons = difficultySelection.querySelectorAll('button');
 
 const onlineMenu = document.getElementById('online-menu');
+const btnShowCreateLobby = document.getElementById('btn-show-create-lobby'); // Button to open Create Lobby modal
 
 const gameScreen = document.getElementById('game-screen');
 const turnIndicator = document.getElementById('turn-indicator');
@@ -36,6 +37,21 @@ const winnerMessage = document.getElementById('winner-message');
 const scoreMessage = document.getElementById('score-message');
 const btnRematch = document.getElementById('btn-rematch');
 const btnNewGame = document.getElementById('btn-new-game');
+
+// --- MODAL UI Elements (NEW) ---
+const modalBackdrop = document.getElementById('modal-backdrop');
+
+// Create Lobby Modal
+const createLobbyModal = document.getElementById('create-lobby-modal');
+const btnCloseCreateLobby = createLobbyModal.querySelector('.close-btn'); // Close button inside modal
+const btnCancelCreateLobby = createLobbyModal.querySelector('.btn-cancel-create-lobby'); // Cancel button inside modal
+// Note: btn-create-lobby-submit-modal is inside the modal but handles form submission, not just closing.
+
+// Share Game Code Modal
+const shareGameCodeModal = document.getElementById('share-game-code-modal');
+const btnCloseShareCode = shareGameCodeModal.querySelector('.close-btn'); // Close button inside modal
+const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal'); // Cancel button inside modal
+
 
 // --- Game State Variables ---
 let currentGameMode = null; // 'ai', 'local', 'online'
@@ -146,7 +162,7 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
 
     showScreen('game-screen');
     messageArea.textContent = '';
-    
+
     const config = {
         mode: mode,
         playerColor: playerColor, // 'red' or 'blue' for AI/online, null for local 2-player
@@ -180,6 +196,57 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
     }
 }
 
+// --- MODAL Control Functions (NEW) ---
+
+/**
+ * Shows a generic modal and the backdrop.
+ * @param {HTMLElement} modalElement - The specific modal element to show.
+ */
+function showModal(modalElement) {
+    if (modalBackdrop && modalElement) {
+        modalBackdrop.classList.add('show');
+        modalElement.classList.add('show');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+}
+
+/**
+ * Hides a generic modal and the backdrop.
+ * @param {HTMLElement} modalElement - The specific modal element to hide.
+ */
+function hideModal(modalElement) {
+    if (modalBackdrop && modalElement) {
+        modalBackdrop.classList.remove('show');
+        modalElement.classList.remove('show');
+        // Only re-enable scrolling if no other modal is open
+        if (!document.querySelector('.modal.show')) {
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+// Specific functions for your 'Create Lobby' modal
+export function showCreateLobbyModal() {
+    showModal(createLobbyModal);
+    // Any specific setup for create lobby modal (e.g., clearing inputs) can go here
+}
+
+export function hideCreateLobbyModal() {
+    hideModal(createLobbyModal);
+    // Any specific cleanup for create lobby modal can go here
+}
+
+// Specific functions for your 'Share Game Code' modal
+export function showShareGameCodeModal() {
+    showModal(shareGameCodeModal);
+    // Any specific setup for share game code modal (e.g., displaying the code) can go here
+}
+
+export function hideShareGameCodeModal() {
+    hideModal(shareGameCodeModal);
+    // Any specific cleanup for share game code modal can go here
+}
+
 
 // --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -208,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnTwoPlayer.addEventListener('click', () => {
         // For local 2-player, humanPlayerColor is not strictly needed but can default to Blue (bottom)
-        setupGame('local', Utils.PLAYER_BLUE); 
+        setupGame('local', Utils.PLAYER_BLUE);
     });
 
     btnChallengeFriend.addEventListener('click', () => {
@@ -300,4 +367,42 @@ document.addEventListener('DOMContentLoaded', () => {
     btnUndo.addEventListener('click', () => {
         damaGame.undoLastMove();
     });
+
+    // --- MODAL Event Listeners (NEW) ---
+
+    // Event listener for opening the 'Create Lobby' modal
+    if (btnShowCreateLobby) {
+        btnShowCreateLobby.addEventListener('click', showCreateLobbyModal);
+    }
+
+    // Event listeners for closing the 'Create Lobby' modal
+    if (btnCloseCreateLobby) {
+        btnCloseCreateLobby.addEventListener('click', hideCreateLobbyModal);
+    }
+    if (btnCancelCreateLobby) {
+        btnCancelCreateLobby.addEventListener('click', hideCreateLobbyModal);
+    }
+
+    // Event listeners for closing the 'Share Game Code' modal
+    if (btnCloseShareCode) {
+        btnCloseShareCode.addEventListener('click', hideShareGameCodeModal);
+    }
+    if (cancelOnlineGameModal) {
+        cancelOnlineGameModal.addEventListener('click', hideShareGameCodeModal);
+    }
+
+    // Event listener for clicking on the backdrop to close any open modal
+    if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', (event) => { // Corrected: modalBackrop -> modalBackdrop
+            // Only close if the click is directly on the backdrop, not on a modal itself
+            if (event.target === modalBackdrop) {
+                if (createLobbyModal && createLobbyModal.classList.contains('show')) {
+                    hideCreateLobbyModal();
+                } else if (shareGameCodeModal && shareGameCodeModal.classList.contains('show')) {
+                    hideShareGameCodeModal();
+                }
+                // Add more conditions here for any other modals you might add
+            }
+        });
+    }
 });

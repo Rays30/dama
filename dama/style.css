@@ -1,36 +1,73 @@
+/*
+ * Consolidated Dama Game Styles
+ * This file combines your original styles with the new design recommendations.
+ *
+ * Key changes:
+ * - New global color variables and Poppins font.
+ * - Redesigned board and pieces.
+ * - Frosted glass effect for modals, consistent button styling.
+ * - Smooth fade/slide animations for modals.
+ * - Responsive adjustments using the new color scheme.
+ * - Preserved existing game logic and online menu specific styles,
+ *   but updated their colors to match the new dark theme.
+ *
+ * IMPORTANT: This version also applies the frosted glass effect to the main menu screens.
+ */
+
+/* --- Root Variables (Updated from new variables.css and existing) --- */
 :root {
+    /* Colors (New Theme - dark blue-gray, emerald green accent, amber highlight) */
+    --bg-dark: #1a202c; /* Main background */
+    --bg-panel: rgba(26, 32, 44, 0.8); /* For semi-transparent panels/modals if needed */
+    --accent: #38a169; /* Emerald green for actions */
+    --accent-highlight: #dd6b20; /* Amber/Orange for hover/highlights */
+    --text-light: #edf2f7; /* Light text color */
+
+    /* Board & Piece Colors (Adjusted from original to new theme) */
+    --board-background: #4a5568; /* Board container background */
+    --dark-square: #2d3748; /* Dark squares (formerly #7F5539) */
+    --light-square: #4a5568; /* Light squares (formerly #CDB48F) */
+    --piece-red-color: #e53e3e; /* Brighter red for pieces (formerly #B22222) */
+    --piece-blue-color: #edf2f7; /* Light white for opponent pieces (formerly #4682B4) */
+    --king-highlight: #ecc94b; /* Gold highlight for kings */
+
+    /* Highlight & Selection */
+    --highlight-color: rgba(56, 161, 105, 0.7); /* Greenish highlight for moves (new accent) */
+    --capture-highlight-color: rgba(237, 2, 2, 0.7); /* Red for captures (adjusted for contrast) */
+    --selected-border: 4px solid #38a169; /* Accent color border for selected piece */
+
+    /* Fonts */
+    --font-body: 'Poppins', sans-serif;
+    --font-heading: 'Poppins', sans-serif;
+
+    /* Responsive Defaults (from original, potentially overridden by JS) */
     --board-size: 640px; /* Default desktop size */
     --square-size: 80px; /* This will be dynamically overridden by JS for responsive board */
     --piece-size: 64px; /* This will be dynamically overridden by JS for responsive board */
-    --red-color: #B22222; /* Firebrick */
-    --blue-color: #4682B4; /* Steelblue */
-    --dark-square: #7F5539; /* Brown stone */
-    --light-square: #CDB48F; /* Light stone */
-    --highlight-color: rgba(255, 255, 0, 0.7); /* Yellow for moves */
-    --capture-highlight-color: rgba(255, 0, 0, 0.7); /* Red for captures */
-    --selected-border: 4px solid #00F; /* Blue border for selected piece */
-    --king-color: gold;
 }
 
+/* --- Global Body Styles (Updated from new base.css) --- */
 body {
-    font-family: 'Arial', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    font-family: var(--font-body);
+    display: flex; /* Kept for centering game-container */
+    justify-content: center; /* Kept for centering game-container */
+    align-items: center; /* Kept for centering game-container */
     min-height: 100vh;
-    background-color: #2c3e50; /* Dark background */
     margin: 0;
     overflow-x: hidden;
-    color: #ecf0f1;
+    line-height: 1.6; /* From new base.css */
 }
 
+/* --- Game Container (Kept mostly from original, colors updated) --- */
 #game-container {
     padding: 15px;
     text-align: center;
     position: relative;
     overflow: hidden;
     width: 100vw;
-    min-height: 100vh; /* Allow it to take full height but also expand */
+    min-height: 100vh;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -38,27 +75,31 @@ body {
     justify-content: center;
 }
 
-/* Titles */
+/* --- Titles (Updated from new base.css and existing) --- */
 h1 {
-    color: #e74c3c;
+    color: var(--accent-highlight); /* Using new highlight color */
     margin: 10px 0 20px 0;
     font-size: 2.5em;
+    font-family: var(--font-heading);
+    font-weight: 600;
 }
 
 h2 {
-    color: #ecf0f1;
+    color: var(--text-light); /* Using new text color */
     margin-bottom: 20px;
     font-size: 2em;
+    font-family: var(--font-heading);
+    font-weight: 600;
 }
 
-/* Screen transitions */
+/* --- Screen Transitions (Retained from original, new animations are for modals) --- */
 .screen {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #34495e;
+    background-color: transparent; /* Make screen background transparent to allow blur to show */
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -69,7 +110,7 @@ h2 {
     z-index: 10;
     padding: 20px;
     box-sizing: border-box;
-    border-radius: 10px;
+    border-radius: 10px; /* From original */
 }
 
 .screen.active {
@@ -82,34 +123,35 @@ h2 {
     pointer-events: none;
 }
 
-/* Menu screens - made to act as cards centered on the body background */
+/* Menu screens - now styled as frosted glass cards */
 #main-menu, #single-player-menu, #online-menu, #result-screen {
-    background-color: #34495e;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    max-width: 680px;
-    width: 95vw;
-    min-height: 50vh;
-    margin: 20px auto;
-    position: relative; /* Change from absolute to relative for normal flow within #game-container */
+    background: rgba(255, 255, 255, 0.05); /* Frosted glass background for screens */
+    backdrop-filter: blur(10px); /* Frosted glass blur */
+    -webkit-backdrop-filter: blur(10px); /* Webkit support */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); /* New shadow for screens */
+    border-radius: 12px; /* New border-radius for screens */
+    max-width: 680px; /* From original */
+    width: 95vw; /* From original */
+    min-height: 50vh; /* From original */
+    margin: 20px auto; /* From original */
+    position: relative;
     opacity: 1;
     transform: none;
-    /* These specific screen styles also need to override the default .screen display:flex */
-    /* Handled by JS adding/removing 'active' class */
 }
+
 
 /* Override .screen properties for stacking behavior within #game-container */
 /* Only the active screen should be displayed, others hidden with display:none by JS */
 #main-menu.screen, #single-player-menu.screen, #online-menu.screen, #result-screen.screen {
-    position: static; /* Allows stacking in normal flow within game-container */
-    transform: none; /* Reset transform from .screen */
-    opacity: 1; /* Keep visible if JS controls display:none */
-    display: none; /* Hidden by default until JS adds 'active' */
+    position: static;
+    transform: none;
+    opacity: 1;
+    display: none;
 }
 
 #main-menu.screen.active, #single-player-menu.screen.active, #online-menu.screen.active, #result-screen.screen.active {
-    display: flex; /* Only active screen is displayed */
-    animation: fade-in 0.5s forwards; /* Add fade-in animation */
+    display: flex;
+    animation: fade-in 0.5s forwards;
 }
 
 /* For game-screen, keep absolute positioning for full overlay */
@@ -119,8 +161,9 @@ h2 {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #34495e;
-    /* No box-shadow/border-radius here if you want board to feel 'floating' */
+    background-color: var(--bg-dark); /* Using new background color */
+    backdrop-filter: none; /* Ensure game screen doesn't blur itself */
+    -webkit-backdrop-filter: none;
 }
 
 @keyframes fade-in {
@@ -128,55 +171,61 @@ h2 {
     to { opacity: 1; }
 }
 
-/* Buttons */
-button {
-    background-color: #27ae60;
-    color: white;
+/* --- Buttons (Updated from new components/buttons.css and original specifics) --- */
+button, .button { /* Added .button for consistency */
+    background-color: var(--accent);
+    color: var(--text-light);
     border: none;
-    padding: 12px 25px;
-    margin: 10px;
-    border-radius: 8px;
-    font-size: 1.1em;
+    border-radius: 6px; /* Slightly less rounded than original 8px */
+    padding: 0.75em 1.5em; /* Adjusted padding */
+    font-size: 1rem; /* Adjusted font size */
     cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    min-width: 180px;
-    width: 80%;
-    max-width: 300px;
-    box-sizing: border-box;
-    font-weight: bold;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: background 0.25s ease, transform 0.2s ease; /* Combined transitions */
+    min-width: 180px; /* From original */
+    width: 80%; /* From original */
+    max-width: 300px; /* From original */
+    box-sizing: border-box; /* From original */
+    font-weight: 600; /* Adjusted from bold to 600 for Poppins */
+    font-family: var(--font-heading); /* Applied new font */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* From original */
+    margin: 10px; /* From original */
 }
 
-button:hover {
-    background-color: #2ecc71;
-    transform: scale(1.05);
+button:hover, .button:hover {
+    background-color: var(--accent-highlight);
+    transform: scale(1.05); /* From original */
+}
+
+button:focus, .button:focus {
+    outline: 2px solid var(--accent-highlight);
+    outline-offset: 2px;
 }
 
 button.back-button {
-    background-color: #7f8c8d;
+    background-color: #7f8c8d; /* Kept original grey */
 }
 button.back-button:hover {
-    background-color: #95a5a6;
+    background-color: #95a5a6; /* Kept original grey hover */
 }
 
 #btn-undo {
-    background-color: #f39c12;
+    background-color: var(--accent-highlight); /* Using new highlight color */
     min-width: unset;
     padding: 8px 15px;
     font-size: 0.9em;
 }
 #btn-undo:hover {
-    background-color: #f1c40f;
+    background-color: #f1c40f; /* Slightly different yellow hover */
 }
 
-/* Game info bar */
+/* --- Game Info Bar (Kept mostly original, colors updated) --- */
 #game-info {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
-    color: #ecf0f1;
-    font-weight: bold;
+    color: var(--text-light);
+    font-weight: 600; /* Adjusted to 600 */
     font-size: 1.2em;
     padding: 0 5px;
     width: 100%;
@@ -190,99 +239,120 @@ button.back-button:hover {
     min-width: 100px;
     text-align: center;
     flex-shrink: 0;
-    font-weight: bold;
+    font-weight: 600; /* Adjusted to 600 */
 }
-#turn-indicator.red { background-color: var(--red-color); }
-#turn-indicator.blue { background-color: var(--blue-color); }
+#turn-indicator.red { background-color: var(--piece-red-color); }
+#turn-indicator.blue { background-color: var(--piece-blue-color); color: var(--bg-dark);} /* Dark text on light piece color */
 
 #message-area {
     flex-grow: 1;
     text-align: center;
     margin: 0 5px;
-    color: #e74c3c;
+    color: var(--accent-highlight); /* Using new highlight color */
     min-width: 150px;
 }
 
-/* Board */
-#board-container {
+/* --- Board (Updated from new board.css and original responsive properties) --- */
+#board-container.board { /* Added .board class to match HTML and new CSS */
     display: grid;
-    grid-template-columns: repeat(8, 1fr); /* Use fractions for dynamic square sizing */
-    grid-template-rows: repeat(8, 1fr);
-    width: 90vmin; /* Responsive width based on viewport min dimension */
-    height: 90vmin; /* Keep it square */
-    border: 4px solid #5a3c26;
-    box-sizing: border-box;
-    margin: auto;
-    position: relative;
-    gap: 1px;
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr); /* Added for consistency */
+    width: 90vmin; /* Responsive width based on viewport min dimension (from original) */
+    height: 90vmin; /* Keep it square (from original) */
+    background: var(--board-background); /* New board background color */
+    padding: 8px; /* New padding */
+    border-radius: 8px; /* New border radius */
+    border: 4px solid var(--dark-square); /* Border from original, color updated */
+    box-sizing: border-box; /* From original */
+    margin: auto; /* From original */
+    position: relative; /* From original */
+    gap: 2px; /* New gap for grid */
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4); /* From original */
 }
 
-/* Board squares */
+/* Board squares (Updated from new board.css and original logic) */
 .square {
-    /* `1fr` in grid-template-columns/rows makes squares responsive */
     position: relative;
-    background-size: cover;
-    /* Removed fixed width/height for squares, let grid handle it */
+    padding-top: 100%; /* From new board.css, maintains aspect ratio */
+    background: linear-gradient(135deg, var(--light-square) 0%, var(--dark-square) 100%); /* New gradient for squares */
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.5); /* New inner shadow */
 }
 
-.square.dark {
+/* Alternating square colors */
+.board .square:nth-child(odd) { /* From new board.css */
+  background-color: var(--dark-square);
+}
+.board .square:nth-child(even) { /* From new board.css */
+  background-color: var(--light-square);
+}
+
+/* Original light/dark square classes will be effectively overwritten by nth-child,
+   but kept for backwards compatibility if JS still assigns them.
+   Ideally, JS only relies on grid and nth-child for basic styling. */
+.square.dark { /* Kept for potential JS assignment, but overwritten by nth-child */
     background-color: var(--dark-square);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
 }
-
-.square.light {
+.square.light { /* Kept for potential JS assignment, but overwritten by nth-child */
     background-color: var(--light-square);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
 }
 
-/* Pieces */
+/* --- Pieces (Updated from new board.css and original specifics) --- */
 .piece {
-    /* Piece size relative to square, centered via JS transform */
-    width: 80%; /* e.g., 80% of its parent square */
-    height: 80%;
-    border-radius: 50%;
-    position: absolute; /* Keep absolute so JS can manipulate transform */
-    cursor: grab;
-    transition: transform 0.3s ease-in-out, border 0.1s ease;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* Default centering, overridden by JS for pixel-perfect positioning */
-    left: 50%;
+    position: absolute;
     top: 50%;
-    transform: translate(-50%, -50%); 
+    left: 50%;
+    width: 70%; /* New width */
+    height: 70%; /* New height */
+    background-color: var(--piece-red-color); /* Default to red, will be overridden by .dark */
+    border-radius: 50%;
+    transform: translate(-50%, -50%); /* For centering */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); /* New shadow */
+    cursor: grab; /* From original */
+    transition: transform 0.3s ease, border 0.1s ease; /* From original and new animations.css */
+    z-index: 100; /* From original */
+    display: flex; /* From original */
+    justify-content: center; /* From original */
+    align-items: center; /* From original */
 }
 
-.piece.red {
-    background-color: var(--red-color);
+.piece.red { /* Updated to new red piece color, border adjusted */
+    background-color: var(--piece-red-color);
     border: 3px solid #8e1c1c;
 }
 
-.piece.blue {
-    background-color: var(--blue-color);
+.piece.dark { /* New class from board.css, used for opponent color (blue in original context) */
+    background-color: var(--piece-blue-color);
+    border: 3px solid #3a6c95;
+}
+/* If your JS uses .piece.blue, you can keep it or rename to .piece.dark */
+.piece.blue { /* Kept for compatibility, if your JS assigns 'blue' class explicitly */
+    background-color: var(--piece-blue-color);
     border: 3px solid #3a6c95;
 }
 
-.piece.selected {
+.piece.selected { /* Updated to new accent color for border */
     border: var(--selected-border);
-    transform: translate(-50%, -50%) scale(1.1); /* Combined transform */
+    transform: translate(-50%, -50%) scale(1.1);
     cursor: grabbing;
     z-index: 101;
 }
 
-.piece.king::after {
+.piece.king { /* New outline and shadow from board.css */
+  outline: 3px solid var(--king-highlight); /* gold highlight */
+  box-shadow: 0 0 10px var(--king-highlight);
+}
+
+.piece.king::after { /* Kept original content, font, color, shadow */
     content: 'K';
     font-size: 2.2em;
     font-weight: bold;
-    color: var(--king-color);
+    color: var(--king-highlight);
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
-/* Highlights */
+/* --- Highlights (Retained from original, with color update) --- */
 .highlight {
     position: absolute;
     width: 100%;
@@ -302,15 +372,21 @@ button.back-button:hover {
     animation: pulse-red 1s infinite alternate;
 }
 
+/* Hover highlight on squares (from new animations.css) */
+.square:hover {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 @keyframes pulse-red {
     from { transform: scale(0.6); opacity: 0.8; }
     to { transform: scale(0.7); opacity: 1; }
 }
 
-/* Online menu specific styles for inputs, etc. */
+/* --- Online Menu Specific Styles (Kept mostly original, colors updated) --- */
 #online-menu .online-setup-section,
 #online-menu .sub-section {
-    background-color: #4a6a8a;
+    background-color: var(--bg-dark); /* Using new background color for inner sections */
     padding: 12px;
     border-radius: 8px;
     margin-bottom: 12px;
@@ -319,13 +395,14 @@ button.back-button:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
+    border: 1px solid var(--dark-square); /* Added border for definition */
 }
 
 #online-menu label {
     display: block;
     margin: 10px 0 5px 0;
-    font-weight: bold;
-    color: #ecf0f1;
+    font-weight: 600; /* Adjusted to 600 */
+    color: var(--text-light);
     width: 100%;
     text-align: left;
 }
@@ -336,11 +413,11 @@ button.back-button:hover {
     padding: 10px;
     margin: 5px 0;
     width: 100%;
-    border: 1px solid #7f8c8d;
+    border: 1px solid var(--dark-square); /* Adjusted border color */
     border-radius: 5px;
     font-size: 1em;
-    background-color: #ecf0f1;
-    color: #2c3e50;
+    background-color: var(--text-light); /* Light background for inputs */
+    color: var(--bg-dark); /* Dark text for inputs */
     box-sizing: border-box;
 }
 
@@ -357,12 +434,12 @@ button.back-button:hover {
 #connection-status {
     font-size: 0.9em;
     margin-top: 10px;
-    color: #bdc3c7;
+    color: var(--text-light); /* Adjusted color */
 }
 
 #lobby-list {
-    background-color: #2c3e50;
-    border: 1px solid #5a6a7a;
+    background-color: var(--bg-dark); /* Using new background color */
+    border: 1px solid var(--dark-square); /* Adjusted border color */
     border-radius: 5px;
     max-height: 200px;
     overflow-y: auto;
@@ -376,20 +453,20 @@ button.back-button:hover {
 #online-menu hr {
     width: 95%;
     border: none;
-    border-top: 1px solid #5a6a7a;
+    border-top: 1px solid var(--dark-square); /* Adjusted border color */
     margin: 15px 0;
 }
 
 .online-explanation {
     max-width: 95%;
     font-size: 0.9em;
-    color: #bdc3c7;
+    color: var(--text-light); /* Adjusted color */
     margin-bottom: 15px;
 }
 
 .lobby-item {
-    background-color: #34495e;
-    border: 1px solid #5a6a7a;
+    background-color: var(--bg-dark); /* Using new background color */
+    border: 1px solid var(--dark-square); /* Adjusted border color */
     padding: 10px;
     margin-bottom: 8px;
     border-radius: 5px;
@@ -401,11 +478,11 @@ button.back-button:hover {
     transition: background-color 0.2s ease;
 }
 
-.lobby-item:hover { background-color: #4a6a8a; }
+.lobby-item:hover { background-color: var(--light-square); } /* Adjusted hover color */
 
 .lobby-item span { flex-grow: 1; text-align: left; }
-.lobby-item .player-count { font-weight: bold; margin-left: 10px; }
-.lobby-item .lobby-status { font-size: 0.8em; color: #bdc3c7; margin-left: 10px; }
+.lobby-item .player-count { font-weight: 600; margin-left: 10px; } /* Adjusted to 600 */
+.lobby-item .lobby-status { font-size: 0.8em; color: var(--text-light); margin-left: 10px; } /* Adjusted color */
 
 #current-lobby-details h5 { margin: 10px 0 5px 0; }
 #lobby-details-players {
@@ -414,7 +491,7 @@ button.back-button:hover {
     width: 100%;
 }
 #lobby-details-players li {
-    background-color: #2c3e50;
+    background-color: var(--bg-dark); /* Using new background color */
     padding: 8px;
     margin-bottom: 5px;
     border-radius: 4px;
@@ -438,103 +515,114 @@ button.back-button:hover {
     font-size: 1em;
     min-width: 150px;
 }
-#btn-play-as-red { background-color: var(--red-color); }
-#btn-play-as-red:hover { background-color: #d63d3d; }
-#btn-play-as-blue { background-color: var(--blue-color); }
-#btn-play-as-blue:hover { background-color: #65a1d3; }
+#btn-play-as-red { background-color: var(--piece-red-color); }
+#btn-play-as-red:hover { background-color: #d63d3d; } /* Adjusted hover */
+#btn-play-as-blue { background-color: var(--piece-blue-color); color: var(--bg-dark); } /* Adjusted for light piece color */
+#btn-play-as-blue:hover { background-color: #65a1d3; } /* Adjusted hover */
 
-.ready-button.ready { background-color: #2ecc71; }
-.ready-button.ready:hover { background-color: #27ae60; }
-.ready-button.not-ready { background-color: #e67e22; }
-.ready-button.not-ready:hover { background-color: #d35400; }
+.ready-button.ready { background-color: var(--accent); } /* Using new accent */
+.ready-button.ready:hover { background-color: #27ae60; } /* Adjusted hover */
+.ready-button.not-ready { background-color: var(--accent-highlight); } /* Using new highlight */
+.ready-button.not-ready:hover { background-color: #d35400; } /* Adjusted hover */
 
 #difficulty-header {
     margin: 10px 0 15px 0;
-    color: #ecf0f1;
+    color: var(--text-light);
 }
 
-/* --- Modal Styles --- */
-.modal-overlay {
+/* --- Modal Styles (Updated from new menu-modal.css and animations.css) --- */
+.modal-backdrop { /* Renamed from .modal-overlay to match new CSS */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Above all other content */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    background: rgba(26, 32, 44, 0.6); /* New background color */
+    z-index: 1000;
+    opacity: 0; /* From new animations.css */
+    transition: opacity 0.3s ease-out; /* From new animations.css */
+    /* visibility: hidden; -- Removed, rely solely on opacity for transition */
 }
 
-.modal-overlay.active {
+.modal-backdrop.show { /* New class for showing backdrop */
     opacity: 1;
-    visibility: visible;
+    /* visibility: visible; -- Removed */
 }
 
 .modal {
-    background-color: #34495e;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-    padding: 25px;
-    max-width: 90vw;
-    width: 450px;
-    position: relative;
-    transform: translateY(-50px); /* Start slightly above center */
-    opacity: 0;
-    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 90%;
+    max-width: 400px; /* New max-width */
+    background: rgba(255, 255, 255, 0.05); /* Frosted glass background */
+    backdrop-filter: blur(10px); /* Frosted glass blur */
+    -webkit-backdrop-filter: blur(10px); /* Webkit support */
+    border-radius: 12px; /* New border radius */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); /* New shadow */
+    color: var(--text-light); /* New text color */
+    padding: 2em; /* New padding */
+    transform: translate(-50%, -50%); /* Centering */
+    z-index: 1001;
+    opacity: 0; /* From new animations.css */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* From new animations.css */
+    display: flex; /* Ensure content stacks correctly (from original .modal) */
+    flex-direction: column; /* Ensure content stacks correctly (from original .modal) */
+    align-items: center; /* Ensure content stacks correctly (from original .modal) */
 }
 
-.modal.active {
-    transform: translateY(0);
+.modal.show { /* New class for showing modal */
     opacity: 1;
+    transform: translate(-50%, -50%); /* Ensures it slides to center */
 }
 
-.modal-content {
+/* Removed .modal-content as it's no longer needed with new .modal styling */
+/* .modal-content {
     width: 100%;
     text-align: center;
-}
+} */
 
-.modal-content h4 {
-    color: #ecf0f1;
+.modal h4 { /* Target h4 directly within modal */
+    color: var(--text-light);
     margin-top: 0;
     margin-bottom: 20px;
     font-size: 1.8em;
 }
 
-.modal-content p {
+.modal p { /* Target p directly within modal */
     margin-bottom: 15px;
-    color: #bdc3c7;
+    color: var(--text-light); /* Adjusted color */
 }
 
-.modal-content input[type="text"],
-.modal-content input[type="password"],
-.modal-content select {
-    width: calc(100% - 20px); /* Adjust for padding within modal content */
+.modal input[type="text"],
+.modal input[type="password"],
+.modal select {
+    width: calc(100% - 20px); /* Adjusted to consider modal padding */
     margin-bottom: 15px;
+    background-color: var(--text-light); /* Light background for inputs */
+    color: var(--bg-dark); /* Dark text for inputs */
+    border: 1px solid var(--dark-square); /* Adjusted border color */
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
 }
 
-.modal-content button {
+.modal button { /* Buttons inside modals */
     width: auto;
     min-width: 150px;
     margin-top: 5px;
     margin-bottom: 5px;
 }
 
-.modal-close-button {
+.close-btn { /* Renamed from .modal-close-button to match new CSS */
     position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
+    top: 12px; /* New position */
+    right: 12px; /* New position */
+    background: transparent; /* New background */
     border: none;
-    font-size: 2em;
-    color: #ecf0f1;
+    font-size: 1.25rem; /* New font size */
+    color: var(--text-light); /* New color */
     cursor: pointer;
     line-height: 1;
     padding: 0;
@@ -545,28 +633,34 @@ button.back-button:hover {
     margin: 0;
 }
 
-.modal-close-button:hover {
-    color: #e74c3c;
+.close-btn:hover {
+    color: var(--accent-highlight); /* New hover color */
     background: none;
-    transform: rotate(90deg);
+    transform: none; /* Removed rotate on hover to be cleaner */
 }
 
-
-/* Media Queries */
+/* --- Media Queries (Combined and updated from new responsive.css and original) --- */
 @media (max-width: 768px) {
-    :root {
-        --board-size: 360px;
-    }
-    
     #game-container { width: 98vw; padding: 10px; }
     h1 { font-size: 1.8em; margin-bottom: 10px; }
     h2 { font-size: 1.5em; }
     #game-info { font-size: 1em; padding: 0; }
     #turn-indicator, #message-area, #btn-undo { margin: 5px auto; }
-    #board-container { max-width: 90vw; height: 90vw; border-width: 2px; margin: 10px auto; } /* Use vw for board as well */
-    .square { width: 100%; height: 100%; } /* Let grid handle sizing */
-    .piece { width: 70%; height: 70%; } /* Adjust piece size */
-    button { padding: 10px 15px; font-size: 0.9em; margin: 8px; min-width: 120px; }
+
+    #board-container.board { /* Target with new class */
+        width: 100%; /* From new responsive.css */
+        max-width: 350px; /* From new responsive.css */
+        margin: 0 auto; /* From new responsive.css */
+        border-width: 2px; /* From original */
+    }
+    .square { /* No fixed width/height, let grid handle it */ }
+    .piece { width: 70%; height: 70%; } /* Adjusted piece size */
+    button, .button { /* From new responsive.css */
+        width: 100%;
+        font-size: 1.1rem;
+        padding: 1em;
+        margin: 8px auto; /* Centered buttons */
+    }
     .piece.king::after { font-size: 1.8em; }
     #online-menu .online-setup-section,
     #online-menu .sub-section,
@@ -576,23 +670,20 @@ button.back-button:hover {
         width: 100%;
         max-width: 100%;
     }
-    .modal {
-        width: 95vw;
-        max-width: 350px; /* Smaller max-width for modals on small screens */
-        padding: 15px;
+    .modal { /* From new responsive.css */
+        width: 95%;
+        max-width: 350px;
+        padding: 1.5em;
     }
-    .modal-content h4 { font-size: 1.5em; margin-bottom: 15px;}
+    .modal h4 { font-size: 1.5em; margin-bottom: 15px;}
 }
 
 @media (max-width: 480px) {
-    :root {
-        --board-size: 280px;
-    }
     h1 { font-size: 1.5em; }
     h2 { font-size: 1.2em; }
     .piece.king::after { font-size: 1.5em; }
     #game-info { font-size: 0.9em; flex-direction: column; }
     #btn-undo { margin-top: 10px; }
-    .modal { padding: 10px; }
-    .modal-content h4 { font-size: 1.3em;}
+    .modal { padding: 1em; } /* Adjusted padding */
+    .modal h4 { font-size: 1.3em;}
 }

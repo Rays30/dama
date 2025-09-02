@@ -1,0 +1,20 @@
+/* styles/responsive.css */
+
+@media (max-width: 768px) {
+  .board {
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+  }
+
+  .modal {
+    width: 95%;
+    padding: 1.5em;
+  }
+
+  button, .button {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 1em;
+  }
+}

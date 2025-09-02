@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dama Game</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Main Stylesheet (imports all others) -->
+    <link rel="stylesheet" href="../styles/main.css">
     <!-- FIX: Add a favicon link to prevent 404 error -->
-    <link rel="icon" href="/favicon.ico"> 
+    <link rel="icon" href="/favicon.ico">
 </head>
 <body>
     <div id="game-container">
@@ -32,7 +35,7 @@
                 <button data-difficulty="medium">Medium</button>
                 <button data-difficulty="hard">Hard</button>
             </div>
-            
+
             <button class="back-button">Back to Menu</button>
         </div>
 
@@ -43,11 +46,11 @@
                 Note: Full online multiplayer requires a server to handle game codes and real-time communication.
                 This client-side implementation provides the UI for it, but the actual network functionality is a placeholder.
             </p>
-            
+
             <div class="online-setup-section">
                 <label for="username-input">Your Username:</label>
                 <input type="text" id="username-input" placeholder="Enter your name" maxlength="20">
-                
+
                 <label for="server-url-input">Server URL:</label>
                 <input type="text" id="server-url-input" placeholder="http://<your-ip>:4000" value="http://localhost:4000">
                 <button id="btn-connect-server">Connect to Server</button>
@@ -66,9 +69,9 @@
                 <hr>
 
                 <button id="btn-show-create-lobby">Create New Game</button>
-                
+
                 <!-- OLD create-lobby-form and create-game-section ARE MOVED TO SEPARATE MODALS BELOW -->
-                
+
                 <hr>
 
                 <div id="join-lobby-form" class="sub-section" style="display: none;">
@@ -79,7 +82,7 @@
                     <button class="back-to-lobby-list">Cancel</button>
                 </div>
             </div>
-            
+
             <div id="current-lobby-details" class="sub-section" style="display: none;">
                 <h4><span id="lobby-details-name"></span> (<span id="lobby-details-status"></span>)</h4>
                 <p>Host: <span id="lobby-details-host"></span></p>
@@ -108,7 +111,8 @@
                 <div id="message-area"></div>
                 <button id="btn-undo" style="display: none;">Undo</button>
             </div>
-            <div id="board-container"></div>
+            <!-- The board.css styles will apply to this container -->
+            <div id="board-container" class="board"></div>
             <button id="btn-back-to-menu">Back to Menu</button>
         </div>
 
@@ -121,35 +125,32 @@
     </div>
 
     <!-- Modals for Online Play -->
-    <div id="modal-overlay" class="modal-overlay"></div>
+    <!-- The modal-backdrop will appear behind all modals -->
+    <div id="modal-backdrop" class="modal-backdrop"></div>
 
     <!-- Create Lobby Modal -->
     <div id="create-lobby-modal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close-button btn-close-create-lobby">&times;</button>
-            <h4>Create Lobby</h4>
-            <input type="text" id="create-lobby-name-modal" placeholder="Lobby Name" maxlength="30">
-            <select id="create-lobby-privacy-modal">
-                <option value="public">Public</option>
-                <option value="private">Private (Requires Code/Password)</option>
-            </select>
-            <input type="password" id="create-lobby-password-modal" placeholder="Password (optional for private)" style="display: none;">
-            <button id="btn-create-lobby-submit-modal">Create Lobby</button>
-            <button class="back-button btn-cancel-create-lobby">Cancel</button>
-        </div>
+        <button class="close-btn btn-close-create-lobby">&times;</button>
+        <h4>Create Lobby</h4>
+        <input type="text" id="create-lobby-name-modal" placeholder="Lobby Name" maxlength="30">
+        <select id="create-lobby-privacy-modal">
+            <option value="public">Public</option>
+            <option value="private">Private (Requires Code/Password)</option>
+        </select>
+        <input type="password" id="create-lobby-password-modal" placeholder="Password (optional for private)" style="display: none;">
+        <button id="btn-create-lobby-submit-modal">Create Lobby</button>
+        <button class="back-button btn-cancel-create-lobby">Cancel</button>
     </div>
 
-    <!-- Share Game Code Modal (formerly create-game-section) -->
+    <!-- Share Game Code Modal -->
     <div id="share-game-code-modal" class="modal">
-        <div class="modal-content">
-            <button class="modal-close-button btn-close-share-code">&times;</button>
-            <h4>Share Game Code</h4>
-            <p>Share this code with your friend:</p>
-            <input type="text" id="game-code-display-modal" readonly>
-            <button id="copy-game-code-modal">Copy Code</button>
-            <p>Waiting for opponent...</p>
-            <button id="cancel-online-game-modal" class="back-button">Cancel</button>
-        </div>
+        <button class="close-btn btn-close-share-code">&times;</button>
+        <h4>Share Game Code</h4>
+        <p>Share this code with your friend:</p>
+        <input type="text" id="game-code-display-modal" readonly>
+        <button id="copy-game-code-modal">Copy Code</button>
+        <p>Waiting for opponent...</p>
+        <button id="cancel-online-game-modal" class="back-button">Cancel</button>
     </div>
 
     <!-- Main game logic -->

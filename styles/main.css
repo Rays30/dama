@@ -1,0 +1,22 @@
+/* styles/main.css */
+
+/* ITCSS Layers */
+
+/* 1. Settings (Variables) */
+@import url('./variables.css');
+
+/* 2. Generic (Resets, Normalize) & Base Elements */
+@import url('./base.css');
+
+/* 3. Objects (Layout patterns - not explicitly created but could go here) */
+
+/* 4. Components (Specific UI elements) */
+@import url('./board.css');
+@import url('./components/menu-modal.css');
+@import url('./components/buttons.css');
+@import url('./components/animations.css');
+
+/* 5. Trumps / Utilities (Helper classes - not explicitly created but could go here) */
+
+/* 6. Responsive overrides */
+@import url('./responsive.css');
