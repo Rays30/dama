@@ -1,5 +1,14 @@
-import { BOARD_SIZE, PLAYER_RED, PLAYER_BLUE, AI_DIFFICULTY, getOpponent, animateMove, getEffectivePlayerDirection, getEffectivePromotionRow, deepCopyBoard } from './utils.js';
+// dama-main/dama/game.js
+
+// REMOVED 'animateMove' from imports as it's no longer in utils.js
+import { BOARD_SIZE, PLAYER_RED, PLAYER_BLUE, AI_DIFFICULTY, getOpponent, getEffectivePlayerDirection, getEffectivePromotionRow, deepCopyBoard } from './utils.js';
 import { initializeAI } from './ai.js'; // Import the AI factory function
+
+// Define a constant for the draw condition threshold
+const DRAW_MOVES_THRESHOLD = 40; // For example, 40 moves without capture or pawn move
+
+// REMOVED animation duration constants as they are no longer used for JS animation.
+
 
 // DamaGame Class
 export class DamaGame {
@@ -24,7 +33,7 @@ export class DamaGame {
             mandatoryCaptures: [],
             gameMode: null,
             aiDifficulty: null,
-            winner: null,
+            winner: null, // Can be PLAYER_RED, PLAYER_BLUE, or 'draw'
             ai: null,
             humanPlayerColor: null,
             aiPlayerColor: null,
@@ -32,12 +41,14 @@ export class DamaGame {
             onlineLobbyId: null,
             isMyTurn: false,
             moveHistory: [],
-            pieceCounter: 0
+            pieceCounter: 0,
+            // Add state for draw condition
+            movesSinceLastCaptureOrPawnMove: 0
         };
 
-        this._createBoardDOM(); // NEW: Create the static board squares once
-        this._initEventListeners(); // Setup event listeners for the board (square clicks)
-        this.resetGame(config); // Initial setup of the game
+        this._createBoardDOM();
+        this._initEventListeners();
+        this.resetGame(config);
     }
 
     // --- Inner Piece Class (Now part of DamaGame's scope) ---
@@ -138,6 +149,8 @@ export class DamaGame {
         this.state.winner = null;
         this.state.moveHistory = [];
         this.state.pieceCounter = 0;
+        // Reset draw counter on game reset
+        this.state.movesSinceLastCaptureOrPawnMove = 0;
 
         this.state.gameMode = config.mode;
         this.state.aiDifficulty = config.aiDifficulty;
@@ -162,23 +175,23 @@ export class DamaGame {
             this.state.currentPlayer = config.initialTurn;
             this.state.isMyTurn = (this.state.currentPlayer === this.state.humanPlayerColor);
         } else {
-            this._initializeStandardBoardContent(); // NEW: initialize board content only
+            this._initializeStandardBoardContent(); // initialize board content only
             this.state.currentPlayer = PLAYER_RED;
             this.state.isMyTurn = (this.state.gameMode !== 'online' || this.state.currentPlayer === this.state.humanPlayerColor);
         }
         
-        this._renderPieces(); // NEW: Render pieces based on internal state
+        this._renderPieces(); // Render pieces based on internal state
         this.updateTurnIndicator();
         this.config.onMessage('');
         this.saveMoveHistory();
 
         if (this.state.gameMode === 'ai' && this.state.currentPlayer === this.state.aiPlayerColor) {
-            setTimeout(() => this.makeAIMove(), 700);
+            setTimeout(() => this.makeAIMove(), 700); // Original delay for AI
         }
         console.log("Game reset and initialized.");
     }
 
-    // NEW: Initialize only the piece content for a standard board setup
+    // Initialize only the piece content for a standard board setup
     _initializeStandardBoardContent() {
         // Clear pieces arrays
         this.state.board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
@@ -229,7 +242,7 @@ export class DamaGame {
         console.log("Board content loaded from serialized data.");
     }
 
-    // NEW: Renders pieces on the board based on the current state.pieces
+    // Renders pieces on the board based on the current state.pieces
     _renderPieces() {
         // Clear all existing pieces from the DOM
         this.dom.boardContainer.querySelectorAll('.piece').forEach(p => p.remove());
@@ -330,7 +343,7 @@ export class DamaGame {
     }
 
     deselectPiece() {
-        if (this.state.selectedPiece && this.state.selectedPiece.element) { // Added element check
+        if (this.state.selectedPiece && this.state.selectedPiece.element) {
             this.state.selectedPiece.element.classList.remove('selected');
             this.state.selectedPiece = null;
         }
@@ -613,10 +626,11 @@ export class DamaGame {
 
         if (!foundCaptureInThisStep && currentPath.length > 0) {
             chains.push({
-                piece: { ...piece },
+                piece: { ...piece }, // Original piece info that started the chain
                 path: currentPath,
-                to: { row: piece.row, col: piece.col },
+                to: { row: piece.row, col: piece.col }, // Final destination
                 capturedPieces: capturedPieces,
+                // Check promotion by seeing if final position promotes and initial piece wasn't king
                 isKingPromotion: !piece.isKing && getEffectivePromotionRow(piece.player, humanPlayerColor) === piece.row
             });
         }
@@ -645,6 +659,11 @@ export class DamaGame {
             return;
         }
 
+        // REMOVED animation duration logic here.
+
+        const isCapture = move.capturedPieces.length > 0;
+        const isPawnMove = !piece.isKing; // If the piece isn't a king, it's a pawn
+
         this.state.board[originalRow][originalCol] = null;
 
         let hasFurtherCaptures = false;
@@ -664,24 +683,26 @@ export class DamaGame {
                     this.state.pieces = this.state.pieces.filter(p => p.id !== capturedPiece.id);
                 }
             }
-            // MODIFIED: Pass targetSquareEl to animateMove for correct positioning
-            const targetSquareEl = this.dom.squares[step.to.row][step.to.col];
-            await new Promise(resolve => {
-                animateMove(piece.element, piece.row, piece.col, step.to.row, step.to.col, resolve, targetSquareEl);
-            });
-
+            // REMOVED await new Promise(resolve => { animateMove(...) })
+            // Instead, directly update position and re-parent
             piece.row = step.to.row;
             piece.col = step.to.col;
-            // piece.updatePosition(); // No longer explicitly needed here for transform, just for data attributes
+
+            // Immediately update the DOM parent and attributes after each step
+            const targetSquareEl = this.dom.squares[step.to.row][step.to.col];
+            if (targetSquareEl && piece.element) {
+                targetSquareEl.replaceChildren(piece.element); // Move piece to new square
+                piece.updatePosition(); // Update data attributes
+            }
+            // If it's a multi-step capture, add a small delay for visual clarity without "animation"
+            if (move.path.length > 1 && step !== move.path[move.path.length - 1]) {
+                 await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between capture steps
+            }
         }
 
         this.state.board[piece.row][piece.col] = piece;
-        // MODIFIED: After move, re-append piece to its new square if it moved from its original parent
-        const newSquareEl = this.dom.squares[piece.row][piece.col];
-        if (newSquareEl && piece.element && piece.element.parentNode !== newSquareEl) {
-            newSquareEl.appendChild(piece.element);
-        }
-        piece.updatePosition(); // Update data attributes
+        // The cleanup for inline styles is no longer necessary here since animateMove isn't setting them.
+        // piece.updatePosition() is already called within the loop for each step, and once after the loop for final state.
 
         if (move.isKingPromotion && !piece.isKing) {
             piece.promoteToKing();
@@ -698,10 +719,17 @@ export class DamaGame {
                 this.config.onMessage('Chain capture! Make another move with this piece.');
 
                 if (this.state.gameMode === 'ai' && this.state.currentPlayer === this.state.aiPlayerColor) {
-                    setTimeout(() => this.makeAIChainMove(), 700);
+                    setTimeout(() => this.makeAIChainMove(), 700); // Original AI chain move delay
                     return;
                 }
             }
+        }
+
+        // Update movesSinceLastCaptureOrPawnMove counter
+        if (isCapture || isPawnMove) {
+            this.state.movesSinceLastCaptureOrPawnMove = 0;
+        } else {
+            this.state.movesSinceLastCaptureOrPawnMove++;
         }
 
         if (!hasFurtherCaptures) {
@@ -713,7 +741,7 @@ export class DamaGame {
     applyServerMove(serializedBoard, serverCurrentTurn, serverRedPiecesCount, serverBluePiecesCount) {
         this._loadBoardFromSerialized(serializedBoard);
         this.deselectPiece(); // Clear any existing selection and highlights
-        this._renderPieces(); // NEW: Re-render all pieces after loading from serialized board
+        this._renderPieces(); // Re-render all pieces after loading from serialized board
 
         this.state.currentPlayer = serverCurrentTurn;
         this.state.mandatoryCaptures = this._findAllMandatoryCaptures(this.state.currentPlayer);
@@ -770,6 +798,7 @@ export class DamaGame {
         }
 
         if (bestNextChainMove) {
+            // Reverted AI chain move delay to a simple fixed timeout
             await new Promise(resolve => setTimeout(resolve, 300));
             this.executeMove(this.state.selectedPiece, bestNextChainMove);
         } else {
@@ -796,17 +825,17 @@ export class DamaGame {
         
         this.state.mandatoryCaptures = this._findAllMandatoryCaptures(this.state.currentPlayer);
 
-        this.checkGameEnd();
+        this.checkGameEnd(); // Call checkGameEnd after turn switch and counter update
         
         if (!this.state.winner) {
             if (this.state.mandatoryCaptures.length > 0) {
-                this.config.onMessage(`${this.state.currentPlayer.toUpperCase()} must take a capture!`);
+                this.config.onMessage(`${this.state.currentPlayer.toUpperCase()}'s turn. Mandatory capture!`);
             } else {
                 this.config.onMessage('');
             }
 
             if (this.state.gameMode === 'ai' && this.state.currentPlayer === this.state.aiPlayerColor) {
-                setTimeout(() => this.makeAIMove(), 700);
+                setTimeout(() => this.makeAIMove(), 700); // Original AI move delay
             }
         }
         this.saveMoveHistory();
@@ -824,6 +853,7 @@ export class DamaGame {
             const pieceToMove = this.state.pieces.find(p => p.id === bestMove.piece.id);
             if (pieceToMove) {
                 this.selectPiece(pieceToMove);
+                // Reverted AI move delay to a simple fixed timeout
                 await new Promise(resolve => setTimeout(resolve, 300));
                 this.executeMove(pieceToMove, bestMove);
             } else {
@@ -832,6 +862,7 @@ export class DamaGame {
                 this.showResultScreen();
             }
         } else {
+            // If AI has no moves, it's a loss for AI
             this.state.winner = humanPlayer;
             this.showResultScreen();
         }
@@ -841,15 +872,35 @@ export class DamaGame {
         const redPieces = this.state.pieces.filter(p => p.player === PLAYER_RED).length;
         const bluePieces = this.state.pieces.filter(p => p.player === PLAYER_BLUE).length;
 
+        // Count kings and pawns
+        const redKings = this.state.pieces.filter(p => p.player === PLAYER_RED && p.isKing).length;
+        const blueKings = this.state.pieces.filter(p => p.player === PLAYER_BLUE && p.isKing).length;
+        const redPawns = redPieces - redKings;
+        const bluePawns = bluePieces - blueKings;
+
+        // 1. Check for standard win/loss (no pieces left)
         if (redPieces === 0) {
             this.state.winner = PLAYER_BLUE;
         } else if (bluePieces === 0) {
             this.state.winner = PLAYER_RED;
         } else {
-            const currentPlayerMoves = this._getAllPlayerMoves(this.state.currentPlayer);
-            
-            if (currentPlayerMoves.length === 0) {
-                this.state.winner = getOpponent(this.state.currentPlayer);
+            // 2. Check for draw condition (only kings left, and no progress for X moves)
+            // Condition: Both players still have pieces AND all their remaining pieces are kings
+            if (redPieces > 0 && bluePieces > 0 && redPawns === 0 && bluePawns === 0) {
+                if (this.state.movesSinceLastCaptureOrPawnMove >= DRAW_MOVES_THRESHOLD) {
+                    this.state.winner = 'draw';
+                    this.config.onMessage("Draw by repetition!", 'orange');
+                }
+            }
+
+            // 3. Check for win/loss (no legal moves left for current player)
+            // This is checked if no other win/draw condition has been met yet.
+            if (!this.state.winner) { // Only check if game isn't already won/drawn
+                const currentPlayerMoves = this._getAllPlayerMoves(this.state.currentPlayer);
+                
+                if (currentPlayerMoves.length === 0) {
+                    this.state.winner = getOpponent(this.state.currentPlayer);
+                }
             }
         }
 
@@ -929,7 +980,9 @@ export class DamaGame {
             humanPlayerColor: this.state.humanPlayerColor,
             aiPlayerColor: this.state.aiPlayerColor,
             gameMode: this.state.gameMode,
-            aiDifficulty: this.state.aiDifficulty
+            aiDifficulty: this.state.aiDifficulty,
+            // Save the draw counter
+            movesSinceLastCaptureOrPawnMove: this.state.movesSinceLastCaptureOrPawnMove
         });
 
         if (this.state.moveHistory.length > 20) {
@@ -972,6 +1025,9 @@ export class DamaGame {
             this.state.gameMode = prevState.gameMode;
             this.state.aiDifficulty = prevState.aiDifficulty;
             this.state.isOnlineGame = false;
+            // Restore the draw counter
+            this.state.movesSinceLastCaptureOrPawnMove = prevState.movesSinceLastCaptureOrPawnMove;
+
 
             // Clear existing DOM pieces and re-render from saved state
             this.dom.boardContainer.querySelectorAll('.piece').forEach(p => p.remove()); // Clear all DOM pieces
@@ -1008,9 +1064,6 @@ export class DamaGame {
             this.clearHighlights();
             this.config.onMessage('Last move undone.', 'blue');
         } else {
-            // This 'else' block would be for if moveHistory becomes empty, which shouldn't happen with length <= 1 check.
-            // But if it does, it tries to reset to a default from a non-existent prevState.
-            // A more robust approach might be to just show the initial state if no more undos.
             console.warn("Undo failed: No previous state to restore. Resetting to initial game config.");
             this.resetGame(this.config); // Reset with current config
         }

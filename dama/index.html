@@ -23,8 +23,7 @@
             <button id="btn-challenge-friend">Challenge a Friend (Online)</button>
         </div>
 
-        <!-- Single Player Menu -->
-        <div id="single-player-menu" class="screen">
+         <div id="single-player-menu" class="screen">
             <h2>Single Player Setup</h2>
             <div class="color-selection">
                 <h3>Choose Your Color:</h3>
@@ -33,7 +32,8 @@
             </div>
             <div class="difficulty-selection">
                 <h3 id="difficulty-header">
-                    Choose Difficulty (Playing as <span id="chosen-ai-color"></span>):
+                    Choose Difficulty (AI will play as <span id="chosen-ai-color"></span>):
+                    <!-- CHANGE MADE HERE ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ -->
                 </h3>
                 <button data-difficulty="easy">Easy</button>
                 <button data-difficulty="medium">Medium</button>
@@ -154,6 +154,17 @@
         <p>Waiting for opponent...</p>
         <button id="cancel-online-game-modal" class="back-button">Cancel</button>
     </div>
+
+    <!-- In your index.html, likely at the end of the body -->
+<div id="confirm-back-modal" class="modal">
+    <button class="close-btn">&times;</button> <!-- This is btnCloseConfirmBack -->
+    <h4>Abandon Game?</h4>
+    <p>Are you sure you want to abandon the current game and return to the main menu?</p>
+    <div class="modal-buttons">
+        <button id="btn-confirm-yes" class="button">Yes, Abandon</button>
+        <button id="btn-confirm-no" class="button">No, Stay</button>
+    </div>
+</div>
 
     <!-- Main game logic -->
     <script type="module" src="main.js"></script>

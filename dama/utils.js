@@ -1,4 +1,5 @@
-// utils.js
+// dama-main/dama/utils.js
+
 export const BOARD_SIZE = 8;
 export const PIECES_PER_PLAYER = 12;
 
@@ -78,22 +79,10 @@ export function deepCopyBoard(board) {
     return newBoard;
 }
 
-// Helper for animations (e.g., waiting for piece movement to complete)
-export function animateMove(element, fromRow, fromCol, toRow, toCol, onComplete) {
-    const squareSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--square-size'));
+// REMOVED animateMove function completely.
+// Piece movement will now rely on CSS transitions defined in style.css
+// and immediate DOM updates for positioning.
 
-    const endX = toCol * squareSize;
-    const endY = toRow * squareSize;
-    
-    element.style.transition = 'transform 0.3s ease-in-out';
-    element.style.transform = `translate(${endX}px, ${endY}px)`;
-
-    element.addEventListener('transitionend', function handler() {
-        element.removeEventListener('transitionend', handler);
-        element.style.transition = ''; // Remove transition to allow instant repositioning later
-        onComplete();
-    });
-}
 
 /**
  * Capitalizes the first letter of a string.

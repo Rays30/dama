@@ -51,6 +51,12 @@ const shareGameCodeModal = document.getElementById('share-game-code-modal');
 const btnCloseShareCode = shareGameCodeModal ? shareGameCodeModal.querySelector('.close-btn') : null;
 const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal');
 
+// NEW: Confirm Back to Menu Modal elements (ensure these match your HTML IDs exactly)
+const confirmBackModal = document.getElementById('confirm-back-modal');
+const btnCloseConfirmBack = confirmBackModal ? confirmBackModal.querySelector('.close-btn') : null; // Access via confirmBackModal
+const btnConfirmYes = document.getElementById('btn-confirm-yes');
+const btnConfirmNo = document.getElementById('btn-confirm-no');
+
 
 // --- Game State Variables ---
 let currentGameMode = null;
@@ -185,7 +191,7 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
     }
 }
 
-function showModal(modalElement) {
+export function showModal(modalElement) {
     console.log(`[showModal] Attempting to show modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.add('show');
@@ -197,12 +203,12 @@ function showModal(modalElement) {
     }
 }
 
-function hideModal(modalElement) {
+export function hideModal(modalElement) {
     console.log(`[hideModal] Attempting to hide modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.remove('show');
         modalElement.classList.remove('show');
-        if (!document.querySelector('.modal.show')) {
+        if (!document.querySelector('.modal.show')) { // Only re-enable scrolling if no other modals are open
             document.body.style.overflow = '';
         }
         console.log(`[hideModal] Modal ${modalElement.id} and backdrop hidden.`);
@@ -212,6 +218,7 @@ function hideModal(modalElement) {
 export function showCreateLobbyModal() {
     console.log("[showCreateLobbyModal] Called.");
     hideShareGameCodeModal(); // Ensure other modals are closed
+    hideConfirmBackModal(); // Ensure this new modal is also closed
     showModal(createLobbyModal);
 }
 
@@ -223,12 +230,26 @@ export function hideCreateLobbyModal() {
 export function showShareGameCodeModal() {
     console.log("[showShareGameCodeModal] Called.");
     hideCreateLobbyModal(); // Ensure other modals are closed
+    hideConfirmBackModal(); // Ensure this new modal is also closed
     showModal(shareGameCodeModal);
 }
 
 export function hideShareGameCodeModal() {
     console.log("[hideShareGameCodeModal] Called.");
     hideModal(shareGameCodeModal);
+}
+
+// NEW: Helper functions for the confirm back modal
+export function showConfirmBackModal() {
+    console.log("[showConfirmBackModal] Called.");
+    hideCreateLobbyModal(); // Ensure other modals are closed
+    hideShareGameCodeModal(); // Ensure other modals are closed
+    showModal(confirmBackModal);
+}
+
+export function hideConfirmBackModal() {
+    console.log("[hideConfirmBackModal] Called.");
+    hideModal(confirmBackModal);
 }
 
 
@@ -240,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalBackdrop) modalBackdrop.classList.remove('show');
     if (createLobbyModal) createLobbyModal.classList.remove('show');
     if (shareGameCodeModal) shareGameCodeModal.classList.remove('show');
+    if (confirmBackModal) confirmBackModal.classList.remove('show'); // NEW: Reset confirm back modal
     document.body.style.overflow = ''; // Ensure body scrolling is re-enabled
     console.log('[DOMContentLoaded] All modals reset to hidden state.');
 
@@ -256,6 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  modalBackdrop:', !!modalBackdrop);
     console.log('  createLobbyModal:', !!createLobbyModal);
     console.log('  shareGameCodeModal:', !!shareGameCodeModal);
+    console.log('  confirmBackModal:', !!confirmBackModal); // NEW: Log status for confirmBackModal
+    console.log('  btnConfirmYes:', !!btnConfirmYes);     // NEW: Log status for btnConfirmYes
+    console.log('  btnConfirmNo:', !!btnConfirmNo);       // NEW: Log status for btnConfirmNo
+    console.log('  btnCloseConfirmBack:', !!btnCloseConfirmBack); // NEW: Log status for btnCloseConfirmBack
 
 
     damaGame = new DamaGame('board-container', {
@@ -282,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure any open modals are hidden when transitioning to a new screen
             hideCreateLobbyModal();
             hideShareGameCodeModal();
+            hideConfirmBackModal(); // NEW: Hide confirm modal
             if (difficultySelection) difficultySelection.style.display = 'none';
             if (chosenAiColorSpan) chosenAiColorSpan.textContent = '';
         });
@@ -293,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure any open modals are hidden when transitioning to a new screen
             hideCreateLobbyModal();
             hideShareGameCodeModal();
+            hideConfirmBackModal(); // NEW: Hide confirm modal
             setupGame('local', Utils.PLAYER_BLUE);
         });
     } else { console.error("ERROR: btnTwoPlayer not found! Cannot attach click listener."); }
@@ -303,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure any open modals are hidden when transitioning to a new screen
             hideCreateLobbyModal();
             hideShareGameCodeModal();
+            hideConfirmBackModal(); // NEW: Hide confirm modal
             showScreen('online-menu');
             initLobbyUI(updateConnectionStatus);
             if (isSocketConnected()) {
@@ -364,26 +393,46 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure any open modals are hidden when returning to main menu
             hideCreateLobbyModal();
             hideShareGameCodeModal();
+            hideConfirmBackModal(); // NEW: Hide confirm modal
         });
     });
 
     if (btnBackToMenuGame) {
         btnBackToMenuGame.addEventListener('click', () => {
-            console.log('[Click] "Back to Menu" (from game) button clicked. Confirming abandon.');
-            if (confirm('Are you sure you want to abandon the current game?')) {
-                if (currentGameMode === 'online' && isSocketConnected()) {
-                    getSocket().emit('lobby:leave');
-                    disconnectSocket();
-                }
-                showScreen('main-menu');
-                currentGameMode = null;
-                currentPlayerColor = null;
-                // Ensure any open modals are hidden
-                hideCreateLobbyModal();
-                hideShareGameCodeModal();
-            }
+            console.log('[Click] "Back to Menu" (from game) button clicked. Showing confirm modal.');
+            showConfirmBackModal(); // NEW: Show the custom modal instead of confirm()
         });
     } else { console.warn("WARN: btnBackToMenuGame not found."); }
+
+    // NEW: Event listeners for the Confirm Back to Menu modal
+    if (btnConfirmYes) {
+        btnConfirmYes.addEventListener('click', () => {
+            console.log('[Click] "Yes, Abandon" button clicked.');
+            if (currentGameMode === 'online' && isSocketConnected()) {
+                getSocket().emit('lobby:leave');
+                disconnectSocket();
+            }
+            hideConfirmBackModal(); // Hide modal first
+            showScreen('main-menu');
+            currentGameMode = null;
+            currentPlayerColor = null;
+            // Ensure any other modals are hidden
+            hideCreateLobbyModal();
+            hideShareGameCodeModal();
+        });
+    } else { console.warn("WARN: btnConfirmYes not found!"); }
+
+    if (btnConfirmNo) {
+        btnConfirmNo.addEventListener('click', () => {
+            console.log('[Click] "No, Stay" button clicked.');
+            hideConfirmBackModal(); // Just hide the modal
+        });
+    } else { console.warn("WARN: btnConfirmNo not found!"); }
+
+    if (btnCloseConfirmBack) {
+        btnCloseConfirmBack.addEventListener('click', hideConfirmBackModal);
+    } else { console.warn("WARN: btnCloseConfirmBack not found!"); }
+
 
     // Result Screen Buttons
     if (btnRematch) {
@@ -410,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Ensure any open modals are hidden
             hideCreateLobbyModal();
             hideShareGameCodeModal();
+            hideConfirmBackModal(); // NEW: Hide confirm modal
         });
     } else { console.warn("WARN: btnNewGame not found."); }
 
@@ -451,6 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     hideCreateLobbyModal();
                 } else if (shareGameCodeModal && shareGameCodeModal.classList.contains('show')) {
                     hideShareGameCodeModal();
+                } else if (confirmBackModal && confirmBackModal.classList.contains('show')) {
+                    hideConfirmBackModal();
                 }
             }
         });

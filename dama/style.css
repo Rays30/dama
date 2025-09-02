@@ -12,6 +12,12 @@
  *   but updated their colors to match the new dark theme.
  *
  * IMPORTANT: This version also applies the frosted glass effect to the main menu screens.
+ *
+ * CRITICAL LAYOUT CHANGES:
+ * - The #game-screen is now a flex container for its children (info, board, back button)
+ * - Widths of game-info, board, and back-to-menu button are harmonized using `clamp()`
+ * - Margins/gaps adjusted for cleaner vertical spacing
+ * - FIX for message-area and undo button wrapping behavior.
  */
 
 /* --- Root Variables (Updated from new variables.css and existing) --- */
@@ -159,7 +165,16 @@ h2 {
     background-color: var(--bg-dark); /* Using new background color */
     backdrop-filter: none; /* Ensure game screen doesn't blur itself */
     -webkit-backdrop-filter: none;
-    z-index: 25; /* Ensure game-screen is on top when active */
+    z-index: 25;
+
+    /* NEW: Use flexbox to arrange items vertically and center them */
+    display: flex;
+    flex-direction: column; /* Stack children (info, board, back button) vertically */
+    align-items: center;   /* Center children horizontally */
+    justify-content: center; /* Center children vertically if there's extra space */
+    padding: 20px;         /* Add some padding around the entire game content */
+    box-sizing: border-box;
+    gap: 15px;             /* Space between the info bar, the board, and the back-to-menu button */
 }
 
 @keyframes fade-in {
@@ -204,11 +219,17 @@ button.back-button:hover {
     background-color: #95a5a6; /* Kept original grey hover */
 }
 
+/* Specific adjustment for the Undo button within the game-info flex container */
 #btn-undo {
     background-color: var(--accent-highlight); /* Using new highlight color */
-    min-width: unset;
+    min-width: unset; /* Allow it to shrink below 180px */
     padding: 8px 15px;
     font-size: 0.9em;
+    width: auto;
+    max-width: fit-content;
+    margin-left: auto; /* Push it to the far right within its line */
+    flex-shrink: 0; /* Ensure it doesn't shrink its content */
+    align-self: center; /* Vertically center it */
 }
 #btn-undo:hover {
     background-color: #f1c40f; /* Slightly different yellow hover */
@@ -217,16 +238,17 @@ button.back-button:hover {
 /* --- Game Info Bar (Kept mostly original, colors updated) --- */
 #game-info {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-between; /* Keep this for spacing when all on one line */
     align-items: center;
-    margin-bottom: 10px;
     color: var(--text-light);
-    font-weight: 600; /* Adjusted to 600 */
+    font-weight: 600;
     font-size: 1.2em;
     padding: 0 5px;
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 5px;
+    flex-wrap: wrap; /* Allows internal elements to wrap if space is tight */
+    gap: 5px; /* Space between elements within the info bar */
+
+    width: clamp(300px, 90vmin, 600px); /* Matches the board's responsive width */
+    min-height: 40px; /* Ensure it has some height even with minimal content */
 }
 
 #turn-indicator {
@@ -234,18 +256,22 @@ button.back-button:hover {
     border-radius: 5px;
     min-width: 100px;
     text-align: center;
-    flex-shrink: 0;
-    font-weight: 600; /* Adjusted to 600 */
+    flex-shrink: 0; /* Ensures it doesn't shrink */
+    font-weight: 600;
 }
 #turn-indicator.red { background-color: var(--piece-red-color); }
 #turn-indicator.blue { background-color: var(--piece-blue-color); color: var(--bg-dark);} /* Dark text on light piece color */
 
 #message-area {
-    flex-grow: 1;
-    text-align: center;
-    margin: 0 5px;
-    color: var(--accent-highlight); /* Using new highlight color */
-    min-width: 150px;
+    flex-grow: 1; /* Still allow it to grow */
+    flex-shrink: 1; /* Allow it to shrink */
+    flex-basis: 150px; /* Give it a reasonable starting width before it grows or shrinks */
+    text-align: center; /* Keep text centered within its own flex item */
+    margin: 0; /* Remove horizontal margin, let gap handle it */
+    min-width: 150px; /* Keep a minimum width */
+    /* NEW: Allow text to wrap naturally to prevent pushing undo aggressively */
+    white-space: normal; /* Allow text to wrap */
+    text-overflow: unset; /* Clear ellipsis if it was set */
 }
 
 /* --- Board (Updated from new board.css and original responsive properties) --- */
@@ -253,17 +279,20 @@ button.back-button:hover {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr); /* Added for consistency */
-    width: 90vmin; /* Responsive width based on viewport min dimension (from original) */
-    height: 90vmin; /* Keep it square (from original) */
-    background: var(--board-background); /* New board background color */
-    padding: 8px; /* New padding */
-    border-radius: 8px; /* New border radius */
-    border: 4px solid var(--dark-square); /* Border from original, color updated */
-    box-sizing: border-box; /* From original */
-    margin: auto; /* From original */
-    position: relative; /* From original */
-    gap: 2px; /* New gap for grid */
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4); /* From original */
+    
+    /* NEW: Use clamp for responsive sizing with a maximum limit */
+    width: clamp(300px, 90vmin, 600px);
+    height: clamp(300px, 90vmin, 600px);
+    
+    background: var(--board-background);
+    padding: 8px;
+    border-radius: 8px;
+    border: 4px solid var(--dark-square);
+    box-sizing: border-box;
+    position: relative;
+    gap: 2px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    flex-shrink: 0; /* Prevent the board from shrinking if space is tight */
 }
 
 /* Board squares (Updated from new board.css and original logic) */
@@ -275,7 +304,6 @@ button.back-button:hover {
 }
 
 /* Alternating square colors */
-/* These rules should correctly apply the checkered pattern if the `square` elements are generated */
 .board .square:nth-child(odd) {
   background-color: var(--dark-square);
 }
@@ -283,9 +311,6 @@ button.back-button:hover {
   background-color: var(--light-square);
 }
 
-/* Original light/dark square classes will be effectively overwritten by nth-child,
-   but kept for backwards compatibility if JS still assigns them.
-   Ideally, JS only relies on grid and nth-child for basic styling. */
 .square.dark { /* Kept for potential JS assignment, but overwritten by nth-child */
     background-color: var(--dark-square);
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
@@ -316,7 +341,7 @@ button.back-button:hover {
 
 .piece.red { /* UPDATED: Changed from bright red to very dark gray / almost black, and border adjusted */
     background-color: var(--piece-red-color);
-    border: 3px solid #000000; /* Darker border for a black piece */
+    border: 3px solid #de0707; /* Darker border for a black piece */
 }
 
 .piece.dark, .piece.blue { /* UPDATED: Now represents the blue pieces */
@@ -638,13 +663,35 @@ button.back-button:hover {
     #game-container { width: 98vw; padding: 10px; }
     h1 { font-size: 1.8em; margin-bottom: 10px; }
     h2 { font-size: 1.5em; }
-    #game-info { font-size: 1em; padding: 0; }
-    #turn-indicator, #message-area, #btn-undo { margin: 5px auto; }
+    #game-info {
+        font-size: 1em;
+        padding: 0;
+        /* Default flex behavior will handle most of the wrapping. */
+        /* We need to ensure message-area and btn-undo don't fight too much for space. */
+        justify-content: center; /* On smaller screens, center content when it wraps */
+    }
+    #turn-indicator {
+        margin: 5px auto; /* Center when it wraps */
+        width: 100%;
+        max-width: 100%; /* Allow it to take full width */
+    }
+    #message-area {
+        margin: 5px auto; /* Center when it wraps */
+        width: 100%;
+        max-width: 100%; /* Allow it to take full width */
+        white-space: normal; /* Allow text to wrap on small screens */
+        text-overflow: unset;
+        flex-basis: auto; /* Allow it to take up space as needed */
+    }
+    #btn-undo {
+        margin: 5px auto; /* Center when it wraps to its own line */
+        width: 100%;
+        max-width: 150px; /* Keep undo button size reasonable */
+    }
 
     #board-container.board { /* Target with new class */
         width: 100%; /* From new responsive.css */
         max-width: 350px; /* From new responsive.css */
-        margin: 0 auto; /* From new responsive.css */
         border-width: 2px; /* From original */
     }
     .square { /* No fixed width/height, let grid handle it */ }
@@ -676,8 +723,35 @@ button.back-button:hover {
     h1 { font-size: 1.5em; }
     h2 { font-size: 1.2em; }
     .piece.king::after { font-size: 1.5em; }
-    #game-info { font-size: 0.9em; flex-direction: column; }
-    #btn-undo { margin-top: 10px; }
-    .modal { padding: 1em; } /* Adjusted padding */
-    .modal h4 { font-size: 1.3em;}
+    #game-info {
+        font-size: 0.9em;
+        flex-direction: column; /* This rule is critical for stacking info elements */
+    }
+    /* Ensure other elements within #game-info still behave */
+    #turn-indicator, #message-area, #btn-undo {
+        width: 100%; /* Take full width of the column */
+        margin: 5px 0; /* Add vertical margin between stacked items */
+        text-align: center;
+    }
+    #btn-undo { margin-top: 10px; max-width: 150px; margin-left: auto; margin-right: auto; } /* Re-center if alone on a line */
 }
+
+/* --- Modal Styles (Updated from new menu-modal.css and animations.css) --- */
+/* ... existing modal styles ... */
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Space between buttons */
+    margin-top: 20px; /* Space above buttons */
+    width: 100%; /* Ensure it takes full width to center buttons */
+}
+
+.modal-buttons button {
+    margin: 0; /* Override default button margin to use gap instead */
+    width: auto; /* Allow buttons to size based on content */
+    min-width: 120px; /* Ensure a minimum width for readability */
+    max-width: 180px; /* Prevent buttons from becoming too wide */
+}
+
+/* ... rest of your existing style.css ... */
