@@ -27,8 +27,10 @@
     --board-background: #4a5568; /* Board container background */
     --dark-square: #2d3748; /* Dark squares (formerly #7F5539) */
     --light-square: #4a5568; /* Light squares (formerly #CDB48F) */
-    --piece-red-color: #e53e3e; /* Brighter red for pieces (formerly #B22222) */
-    --piece-blue-color: #edf2f7; /* Light white for opponent pieces (formerly #4682B4) */
+    
+    /* UPDATED: Piece Colors as per your request */
+    --piece-red-color: #de0707; /* Changed from bright red to very dark gray / almost black */
+    --piece-blue-color: #4682B4; /* Changed from light white to steel blue */
     --king-highlight: #ecc94b; /* Gold highlight for kings */
 
     /* Highlight & Selection */
@@ -134,21 +136,16 @@ h2 {
     min-height: 50vh; /* From original */
     margin: 20px auto; /* From original */
     position: relative;
-    /* REMOVED: opacity: 1; transform: none; from here. Let .screen.active handle the active states dynamically. */
+    /* Removed redundant opacity/transform settings, let .screen.active manage active states */
 }
 
 /* Override .screen properties for stacking behavior within #game-container */
-/* This rule is now primarily for setting `position: relative` for menu cards and could be merged up. */
-/* But keeping it for clarity that these are treated as "cards" within the flow. */
 #main-menu.screen, #single-player-menu.screen, #online-menu.screen, #result-screen.screen {
     position: relative;
-    /* REMOVED: transform: none; opacity: 1; display: none; */
-    /* These are now handled by the general `.screen` and `.screen.active` rules */
+    /* Removed redundant display/opacity/transform settings, let .screen and .screen.active manage them */
 }
 
 #main-menu.screen.active, #single-player-menu.screen.active, #online-menu.screen.active, #result-screen.screen.active {
-    /* REMOVED: display: flex; */
-    /* This is now handled by the general `.screen.active` rule */
     animation: fade-in 0.5s forwards;
 }
 
@@ -162,7 +159,7 @@ h2 {
     background-color: var(--bg-dark); /* Using new background color */
     backdrop-filter: none; /* Ensure game screen doesn't blur itself */
     -webkit-backdrop-filter: none;
-    z-index: 25; /* FIX: Ensure game-screen is on top when active */
+    z-index: 25; /* Ensure game-screen is on top when active */
 }
 
 @keyframes fade-in {
@@ -278,10 +275,11 @@ button.back-button:hover {
 }
 
 /* Alternating square colors */
-.board .square:nth-child(odd) { /* From new board.css */
+/* These rules should correctly apply the checkered pattern if the `square` elements are generated */
+.board .square:nth-child(odd) {
   background-color: var(--dark-square);
 }
-.board .square:nth-child(even) { /* From new board.css */
+.board .square:nth-child(even) {
   background-color: var(--light-square);
 }
 
@@ -304,7 +302,7 @@ button.back-button:hover {
     left: 50%;
     width: 70%; /* New width */
     height: 70%; /* New height */
-    background-color: var(--piece-red-color); /* Default to red, will be overridden by .dark */
+    background-color: var(--piece-red-color); /* Default to your new 'black' piece color */
     border-radius: 50%;
     transform: translate(-50%, -50%); /* For centering */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); /* New shadow */
@@ -316,19 +314,14 @@ button.back-button:hover {
     align-items: center; /* From original */
 }
 
-.piece.red { /* Updated to new red piece color, border adjusted */
+.piece.red { /* UPDATED: Changed from bright red to very dark gray / almost black, and border adjusted */
     background-color: var(--piece-red-color);
-    border: 3px solid #8e1c1c;
+    border: 3px solid #000000; /* Darker border for a black piece */
 }
 
-.piece.dark { /* New class from board.css, used for opponent color (blue in original context) */
+.piece.dark, .piece.blue { /* UPDATED: Now represents the blue pieces */
     background-color: var(--piece-blue-color);
-    border: 3px solid #3a6c95;
-}
-/* If your JS uses .piece.blue, you can keep it or rename to .piece.dark */
-.piece.blue { /* Kept for compatibility, if your JS assigns 'blue' class explicitly */
-    background-color: var(--piece-blue-color);
-    border: 3px solid #3a6c95;
+    border: 3px solid #3a6c95; /* Suitable border for the blue piece */
 }
 
 .piece.selected { /* Updated to new accent color for border */
@@ -540,12 +533,12 @@ button.back-button:hover {
     z-index: 1000;
     opacity: 0; /* From new animations.css */
     transition: opacity 0.3s ease-out; /* From new animations.css */
-    /* visibility: hidden; -- Removed, rely solely on opacity for transition */
+    pointer-events: none; /* Ensure backdrop is not clickable by default */
 }
 
 .modal-backdrop.show { /* New class for showing backdrop */
     opacity: 1;
-    /* visibility: visible; -- Removed */
+    pointer-events: auto; /* Only clickable when shown */
 }
 
 .modal {
@@ -568,11 +561,13 @@ button.back-button:hover {
     display: flex; /* Ensure content stacks correctly (from original .modal) */
     flex-direction: column; /* Ensure content stacks correctly (from original .modal) */
     align-items: center; /* Ensure content stacks correctly (from original .modal) */
+    pointer-events: none; /* Ensure modal is not clickable by default */
 }
 
 .modal.show { /* New class for showing modal */
     opacity: 1;
     transform: translate(-50%, -50%); /* Ensures it slides to center */
+    pointer-events: auto; /* Only clickable when shown */
 }
 
 /* Removed .modal-content as it's no longer needed with new .modal styling */
@@ -685,61 +680,4 @@ button.back-button:hover {
     #btn-undo { margin-top: 10px; }
     .modal { padding: 1em; } /* Adjusted padding */
     .modal h4 { font-size: 1.3em;}
-}
-
-.screen {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: transparent;
-    display: none; /* Crucial: Hide all screens by default */
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
-    transform: translateX(100%);
-    opacity: 0;
-    z-index: 10;
-    padding: 20px;
-    box-sizing: border-box;
-    border-radius: 10px;
-    pointer-events: none; /* Crucial: No pointer events for inactive screens */
-}
-
-.screen.active {
-    display: flex; /* Crucial: Show active screen with flex */
-    transform: translateX(0);
-    opacity: 1;
-    z-index: 20;
-    pointer-events: auto; /* Crucial: Enable pointer events for active screen */
-}
-
-/* ... (rest of your CSS including modal styles) ... */
-
-.modal-backdrop {
-    /* ... */
-    z-index: 1000;
-    opacity: 0;
-    transition: opacity 0.3s ease-out;
-    pointer-events: none; /* Ensure backdrop is not clickable by default */
-}
-
-.modal-backdrop.show {
-    opacity: 1;
-    pointer-events: auto; /* Only clickable when shown */
-}
-
-.modal {
-    /* ... */
-    z-index: 1001;
-    opacity: 0;
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-    pointer-events: none; /* Ensure modal is not clickable by default */
-}
-
-.modal.show {
-    opacity: 1;
-    pointer-events: auto; /* Only clickable when shown */
 }
