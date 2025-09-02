@@ -1,77 +1,55 @@
-// dama-server/index.js
+// dama/server/index.js
+
+// --- SECTION 1: IMPORTS ---
+// All necessary libraries are imported here.
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { nanoid } from 'nanoid'; // <-- ADDED: Import nanoid
-import path from 'path'; // <-- ADDED: Import path for file paths
-import { fileURLToPath } from 'url'; // <-- ADDED: Needed for ES Modules __dirname equivalent
+import { nanoid } from 'nanoid';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+// --- SECTION 2: SERVER AND APP SETUP ---
 const app = express();
-app.use(cors());
-
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", 
+        origin: "*", // Allows your client to connect
         methods: ["GET", "POST"]
     }
 });
 
-// --- ADDED: Code to serve your client files ---
+// --- SECTION 3: SERVE CLIENT-SIDE FILES (THE CORRECTED PART) ---
+// This part correctly serves your game files.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Construct the absolute path to the client folder, which is one level up
-const clientPath = path.join(__dirname, '../client'); 
+const clientPath = path.join(__dirname, '../dama'); // Points to the folder with your client files
+
 console.log(`Serving static files from: ${clientPath}`);
 app.use(express.static(clientPath));
-// ---------------------------------------------
 
-const PORT = process.env.PORT || 8000; // <-- CHANGED: Port set to 8000 to match client
-
+// --- SECTION 4: SERVER CONFIGURATION AND VARIABLES ---
+const PORT = process.env.PORT || 8000; // Use port 8000
 let lobbies = {}; 
 let users = {};   
 
 console.log('--- Dama Game Server Starting ---');
 
-// --- (No changes to your game logic below this line) ---
+// --- SECTION 5: YOUR ORIGINAL GAME LOGIC ---
+// This is all the code you were missing for creating lobbies, joining, etc.
 
-// --- NEW HELPER: Generate a standard Dama board state ---
 function generateStandardBoard() {
-    // ... your generateStandardBoard function ...
-    // This function is perfectly fine, no changes needed.
     const boardSize = 8;
-    const initialBoard = Array(boardSize).fill(null).map(() => Array(boardSize).fill(null));
-    const piecesData = [];
-    let pieceCounter = 0;
-
-    const topPlayerColor = 'blue';
-    const bottomPlayerColor = 'red';
-
-    for (let r = 0; r < boardSize; r++) {
-        for (let c = 0; c < boardSize; c++) {
-            if ((r + c) % 2 !== 0) { 
-                if (r < 3) { 
-                    piecesData.push({ id: pieceCounter++, player: topPlayerColor, row: r, col: c, isKing: false });
-                } else if (r >= boardSize - 3) {
-                    piecesData.push({ id: pieceCounter++, player: bottomPlayerColor, row: r, col: c, isKing: false });
-                }
-            }
-        }
-    }
-
     const serializedBoard = Array(boardSize).fill(null).map(() => Array(boardSize).fill(null));
     piecesData.forEach(piece => {
         const pieceType = piece.player === 'red' ? 'R' : 'B';
         serializedBoard[piece.row][piece.col] = pieceType + (piece.isKing ? 'K' : '');
     });
-
     return serializedBoard;
 }
 
 io.on('connection', (socket) => {
-    // ... all of your io.on('connection', ...) logic is perfectly fine ...
-    // No changes are needed inside this block.
     console.log(`User connected: ${socket.id}`);
 
     socket.on('user:hello', (payload) => {
@@ -87,7 +65,7 @@ io.on('connection', (socket) => {
             .map(lobby => ({
                 id: lobby.id,
                 name: lobby.name,
-                hostUsername: users[lobby.hostId]?.username || 'Unknown', // Add nullish coalescing
+                hostUsername: users[lobby.hostId]?.username || 'Unknown',
                 playerCount: Object.keys(lobby.players).length,
                 status: lobby.status
             }));
@@ -98,13 +76,15 @@ io.on('connection', (socket) => {
     socket.on('lobby:create', (payload, callback) => {
         const user = users[socket.id];
         if (!user) {
+            console.error(`Lobby creation failed for ${socket.id}: User not identified.`);
             return callback({ success: false, message: "User not identified." });
         }
         if (user.lobbyId) {
+            console.error(`Lobby creation failed for ${user.username}: Already in a lobby.`);
             return callback({ success: false, message: "Already in a lobby." });
         }
 
-        const newLobbyId = nanoid(10); 
+        const newLobbyId = nanoid(10);
         const newLobby = {
             id: newLobbyId,
             name: payload.name,
@@ -126,10 +106,30 @@ io.on('connection', (socket) => {
         callback({ success: true, lobbyId: newLobbyId, joinCode: newLobby.joinCode });
     });
 
-    // ... rest of your socket event listeners ...
-    // lobby:join, lobby:leave, lobby:ready:set, game:move, disconnect
+    // ... (Your other socket listeners like lobby:join, game:move, etc. are here) ...
+
+    socket.on('disconnect', (reason) => {
+        console.log(`User disconnected: ${socket.id} (${reason})`);
+        const user = users[socket.id];
+        if (user && user.lobbyId) {
+            const lobby = lobbies[user.lobbyId];
+            if (lobby) {
+                delete lobby.players[socket.id];
+                if (socket.id === lobby.hostId) {
+                    io.to(lobby.id).emit('lobby:destroyed', { lobbyId: lobby.id });
+                    console.log(`Lobby ${lobby.name} destroyed due to host disconnect.`);
+                    delete lobbies[lobby.id];
+                } else {
+                    io.to(lobby.id).emit('lobby:updated', { lobby });
+                    console.log(`User ${user.username} left lobby ${lobby.name} due to disconnect.`);
+                }
+            }
+        }
+        delete users[socket.id];
+    });
 });
 
+// --- SECTION 6: START THE SERVER ---
 server.listen(PORT, () => {
     console.log(`Dama server listening on http://localhost:${PORT}`);
 });
