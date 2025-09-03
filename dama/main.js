@@ -2,13 +2,12 @@
 import * as Utils from './utils.js';
 import { DamaGame } from './game.js'; // Your main game logic class/object
 
-// IMPORT initLobbyUI, updateConnectionStatus, leaveOnlineLobbyConnection from lobby.js
 import { initLobbyUI, updateConnectionStatus, leaveOnlineLobbyConnection } from './client/lobby/lobby.js';
 import { getSocket, isSocketConnected, disconnectSocket } from './client/net/socket.js';
 
 // --- Global UI Elements ---
 const gameContainer = document.getElementById('game-container');
-const screens = document.querySelectorAll('.screen'); // All screens with the 'screen' class
+const screens = document.querySelectorAll('.screen'); 
 
 const mainMenu = document.getElementById('main-menu');
 const btnSinglePlayer = document.getElementById('btn-single-player');
@@ -20,11 +19,11 @@ const btnPlayAsRed = document.getElementById('btn-play-as-red');
 const btnPlayAsBlue = document.getElementById('btn-play-as-blue');
 const difficultySelection = singlePlayerMenu ? singlePlayerMenu.querySelector('.difficulty-selection') : null;
 const difficultyHeader = document.getElementById('difficulty-header');
-const chosenAiColorSpan = document.getElementById('chosen-ai-color'); // Span to show chosen color
+const chosenAiColorSpan = document.getElementById('chosen-ai-color');
 const difficultyButtons = difficultySelection ? difficultySelection.querySelectorAll('button') : [];
 
 const onlineMenu = document.getElementById('online-menu');
-const btnShowCreateLobby = document.getElementById('btn-show-create-lobby'); // Button to open Create Lobby modal
+const btnShowCreateLobby = document.getElementById('btn-show-create-lobby');
 
 const gameScreen = document.getElementById('game-screen');
 const turnIndicator = document.getElementById('turn-indicator');
@@ -41,21 +40,17 @@ const btnNewGame = document.getElementById('btn-new-game');
 // --- MODAL UI Elements ---
 const modalBackdrop = document.getElementById('modal-backdrop');
 
-// Create Lobby Modal
 const createLobbyModal = document.getElementById('create-lobby-modal');
 const btnCloseCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.close-btn') : null;
 const btnCancelCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.btn-cancel-create-lobby') : null;
 
-// Removed: Share Game Code Modal elements, as they are no longer in HTML
-// const shareGameCodeModal = document.getElementById('share-game-code-modal');
-// const btnCloseShareCode = shareGameCodeModal ? shareGameCodeModal.querySelector('.close-btn') : null;
-// const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal');
-
-// Confirm Back to Menu Modal elements
 const confirmBackModal = document.getElementById('confirm-back-modal');
 const btnCloseConfirmBack = confirmBackModal ? confirmBackModal.querySelector('.close-btn') : null;
 const btnConfirmYes = document.getElementById('btn-confirm-yes');
 const btnConfirmNo = document.getElementById('btn-confirm-no');
+
+// NEW: Reference for the back to main menu button in online-menu
+const btnBackToMainFromOnline = document.getElementById('btn-back-to-main-from-online');
 
 
 // --- Game State Variables ---
@@ -65,7 +60,6 @@ let currentAIDifficulty = null;
 let onlineGameSocket = null;
 let onlineGameLobbyId = null;
 
-// DamaGame instance
 let damaGame;
 
 // --- Helper Functions (Callbacks for DamaGame to update UI) ---
@@ -91,7 +85,6 @@ export function showScreen(id) {
     } else {
         console.error(`[showScreen] ERROR: Target screen with ID '${id}' not found.`);
     }
-    // Clear messages and turn indicator, but check if elements exist
     if (messageArea) messageArea.textContent = '';
     if (turnIndicator) {
         turnIndicator.textContent = '';
@@ -163,7 +156,7 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
         playerColor: playerColor,
         aiDifficulty: currentAIDifficulty,
         socket: onlineGameSocket,
-        lobbyId: onlineGameLobbyId,
+        lobbyId: onlineLobbyId,
         initialBoard: initialBoardState,
         initialTurn: initialTurn,
         onTurnChange: updateTurnIndicator,
@@ -183,7 +176,7 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
     if (mode === 'online' && onlineGameSocket) {
         onlineGameSocket.off('game:move');
         onlineGameSocket.on('game:move', (payload) => {
-            if (payload.lobbyId === onlineGameLobbyId) {
+            if (payload.lobbyId === onlineLobbyId) {
                 console.log('[Online] Received game:move from server:', payload);
                 if (damaGame) damaGame.applyServerMove(payload.board, payload.currentTurn, payload.redPiecesCount, payload.bluePiecesCount);
             }
@@ -191,17 +184,17 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
     }
 }
 
-// EXPORTED showModal/hideModal functions (now authoritative and robust)
+// EXPORTED showModal/hideModal functions
 export function showModal(modalElement) {
     console.log(`[main.js][showModal] Attempting to show modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.add('show');
-        modalBackdrop.style.display = 'block'; // Ensure backdrop is displayed
-        modalBackdrop.style.pointerEvents = 'auto'; // Enable interactions for backdrop
+        modalBackdrop.style.display = 'block'; 
+        modalBackdrop.style.pointerEvents = 'auto';
 
         modalElement.classList.add('show');
-        modalElement.style.display = 'flex'; // Ensure modal is displayed
-        modalElement.style.pointerEvents = 'auto'; // Enable interactions
+        modalElement.style.display = 'flex'; 
+        modalElement.style.pointerEvents = 'auto';
 
         document.body.style.overflow = 'hidden';
         console.log(`[main.js][showModal] Modal ${modalElement.id} and backdrop shown.`);
@@ -214,42 +207,31 @@ export function hideModal(modalElement) {
     console.log(`[main.js][hideModal] Attempting to hide modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalElement) {
         modalElement.classList.remove('show');
-        // Add a small timeout to allow CSS transitions (opacity) to complete
-        // CRITICAL: Use !important to override any lingering inline/specific styles
         setTimeout(() => {
             modalElement.style.setProperty('display', 'none', 'important');
             modalElement.style.setProperty('pointer-events', 'none', 'important');
             console.log(`[main.js][hideModal] Modal ${modalElement.id} display set to: ${modalElement.style.display}`);
-        }, 300); // Match this duration with your CSS transition duration
+        }, 300);
     }
 
-    // Check if ANY other modals are still open before hiding the backdrop and re-enabling scroll
-    // This timeout ensures that the classList.remove takes effect before recounting.
     setTimeout(() => {
         const remainingActiveModals = document.querySelectorAll('.modal.show');
         if (remainingActiveModals.length === 0) {
             if (modalBackdrop) {
                 modalBackdrop.classList.remove('show');
-                // CRITICAL: Use !important for backdrop as well
                 modalBackdrop.style.setProperty('display', 'none', 'important');
                 modalBackdrop.style.setProperty('pointer-events', 'none', 'important');
                 console.log(`[main.js][hideModal] Backdrop display set to: ${modalBackdrop.style.display}`);
             }
-            document.body.style.overflow = ''; // Re-enable body scrolling
+            document.body.style.overflow = '';
             console.log(`[main.js][hideModal] Backdrop hidden, body scroll re-enabled.`);
         } else {
             console.log(`[main.js][hideModal] Other modals still active (${remainingActiveModals.length}). Keeping backdrop.`);
         }
-    }, 300); // Same delay as above
+    }, 300);
     console.log(`[main.js][hideModal] Modal ${modalElement ? modalElement.id : 'null'} hidden signal sent.`);
 }
 
-
-// Removed showCreateLobbyModal, hideCreateLobbyModal, showShareGameCodeModal, hideShareGameCodeModal
-// as lobby.js now uses the exported showModal/hideModal from main.js directly, or handles its own specifics.
-
-
-// NEW: Helper functions for the confirm back modal
 export function showConfirmBackModal() {
     console.log("[showConfirmBackModal] Called.");
     showModal(confirmBackModal);
@@ -257,7 +239,6 @@ export function showConfirmBackModal() {
 
 export function hideConfirmBackModal() {
     console.log("[hideConfirmBackModal] Called.");
-    // FIX: Corrected typo from confirmBackBackModal to confirmBackModal
     hideModal(confirmBackModal);
 }
 
@@ -266,23 +247,22 @@ export function hideConfirmBackModal() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('--- [main.js] DOMContentLoaded fired, starting initialization ---');
 
-    // **IMPORTANT ADDITION: Reset all modals at startup**
     if (modalBackdrop) {
         modalBackdrop.classList.remove('show');
-        modalBackdrop.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        modalBackdrop.style.setProperty('display', 'none', 'important');
         modalBackdrop.style.setProperty('pointer-events', 'none', 'important');
     }
     if (createLobbyModal) {
         createLobbyModal.classList.remove('show');
-        createLobbyModal.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        createLobbyModal.style.setProperty('display', 'none', 'important');
         createLobbyModal.style.setProperty('pointer-events', 'none', 'important');
     }
     if (confirmBackModal) {
         confirmBackModal.classList.remove('show');
-        confirmBackModal.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        confirmBackModal.style.setProperty('display', 'none', 'important');
         confirmBackModal.style.setProperty('pointer-events', 'none', 'important');
     }
-    document.body.style.overflow = ''; // Ensure body scrolling is re-enabled
+    document.body.style.overflow = '';
     console.log('[DOMContentLoaded] All modals reset to hidden state.');
 
 
@@ -297,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  resultScreen:', !!resultScreen);
     console.log('  modalBackdrop:', !!modalBackdrop);
     console.log('  createLobbyModal:', !!createLobbyModal);
-    console.log('  shareGameCodeModal (expected false):', !!document.getElementById('share-game-code-modal')); // CHECK STATUS
+    console.log('  shareGameCodeModal (expected false):', !!document.getElementById('share-game-code-modal'));
     console.log('  confirmBackModal:', !!confirmBackModal);
     console.log('  btnConfirmYes:', !!btnConfirmYes);
     console.log('  btnConfirmNo:', !!btnConfirmNo);

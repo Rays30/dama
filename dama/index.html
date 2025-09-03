@@ -12,6 +12,24 @@
     <link rel="icon" href="/favicon.ico">
 </head>
 <body>
+
+<a href="http://127.0.0.1:5500/index.html" style="text-decoration: none;">
+  <button id="games-button" style="
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    padding: 8px 12px;
+    background-color: #333;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  ">
+    Games
+  </button>
+</a>    
+
     <div id="game-container">
         <h1>Dama Game</h1>
 
@@ -54,7 +72,7 @@
                 <input type="text" id="username-input" placeholder="Enter your name" maxlength="20">
 
                 <label for="server-url-input">Server URL:</label>
-                <input type="text" id="server-url-input" placeholder="http://<your-ip>:4000" value="http://localhost:8000"> <!-- Updated default port to 8000 -->
+                <input type="text" id="server-url-input" placeholder="http://<your-ip>:4000" value="http://localhost:8000">
                 <button id="btn-connect-server">Connect to Server</button>
                 <p id="connection-status">Disconnected.</p>
             </div>
@@ -74,7 +92,6 @@
 
                 <hr>
 
-                <!-- Original Join Lobby Form (for direct code input) - kept as a sub-section if you still need it -->
                 <div id="join-lobby-form" class="sub-section" style="display: none;">
                     <h4>Join Private Lobby by Code</h4>
                     <input type="text" id="join-lobby-code" placeholder="Enter game code">
@@ -83,12 +100,8 @@
                     <button class="back-to-lobby-list">Cancel</button>
                 </div>
             </div>
-
-            <!-- The #current-lobby-details content is now INSIDE the #lobby-details-modal -->
-            <!-- This div itself will no longer be directly shown/hidden but its content will populate the modal -->
-            <!-- <div id="current-lobby-details" class="sub-section" style="display: none;"> -->
-                <!-- Content moved to #lobby-details-modal below -->
-            <!-- </div> -->
+            <!-- NEW: Add a Back to Menu button here -->
+            <button id="btn-back-to-main-from-online" class="back-button">Back to Main Menu</button>
         </div>
 
         <!-- Game Screen -->
@@ -128,7 +141,7 @@
         <button class="back-button btn-cancel-create-lobby">Cancel</button>
     </div>
 
-    <!-- NEW: Lobby Details Modal (contains the old current-lobby-details content) -->
+    <!-- Lobby Details Modal (contains the old current-lobby-details content) -->
     <div id="lobby-details-modal" class="modal">
         <button class="close-btn btn-close-lobby-details-modal">&times;</button>
         <div id="current-lobby-details"> <!-- Content from original #current-lobby-details goes here -->
@@ -153,10 +166,6 @@
             </div>
         </div>
     </div>
-
-    <!-- REMOVED: Share Game Code Modal (id="share-game-code-modal") -->
-    <!-- This modal is no longer needed based on your request. -->
-
 
     <!-- NEW: Join Private Lobby Modal -->
     <div id="join-private-lobby-modal" class="modal">
