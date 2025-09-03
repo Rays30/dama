@@ -1,6 +1,10 @@
 // FILE: dama/client/lobby/lobby.js
-import { getSocket, isSocketConnected, connectSocket } from '../net/socket.js';
-import { showScreen, showMessage, setupGame } from '../../main.js'; // Import showScreen, showMessage, setupGame from main.js
+import { getSocket, isSocketConnected, connectSocket, disconnectSocket } from '../net/socket.js';
+// IMPORT showModal and hideModal from main.js (now authoritative)
+import { showScreen, showMessage, setupGame, showModal, hideModal } from '../../main.js';
+
+// REMOVED the local modalBackdrop constant here, as it's owned by main.js
+// const modalBackdrop = document.getElementById('modal-backdrop');
 
 const onlineMenu = document.getElementById('online-menu');
 const usernameInput = document.getElementById('username-input');
@@ -14,29 +18,28 @@ const btnRefreshLobbies = document.getElementById('btn-refresh-lobbies');
 
 const btnShowCreateLobby = document.getElementById('btn-show-create-lobby'); // Button to open create lobby modal
 
-// --- Modal DOM Elements ---
-const modalBackdrop = document.getElementById('modal-backdrop'); // FIX: Corrected ID to modal-backdrop
-
+// --- Modal DOM Elements (still need to get refs here) ---
 const createLobbyModal = document.getElementById('create-lobby-modal');
 const createLobbyNameInputModal = document.getElementById('create-lobby-name-modal');
 const createLobbyPrivacySelectModal = document.getElementById('create-lobby-privacy-modal');
 const createLobbyPasswordInputModal = document.getElementById('create-lobby-password-modal');
 const btnCreateLobbySubmitModal = document.getElementById('btn-create-lobby-submit-modal');
-const btnCloseCreateLobby = document.querySelector('.btn-close-create-lobby'); // Close button for create modal
-const btnCancelCreateLobby = document.querySelector('.btn-cancel-create-lobby'); // Cancel button for create modal
+const btnCloseCreateLobby = document.querySelector('.btn-close-create-lobby');
+const btnCancelCreateLobby = document.querySelector('.btn-cancel-create-lobby');
 
-const shareGameCodeModal = document.getElementById('share-game-code-modal');
-const gameCodeDisplayModal = document.getElementById('game-code-display-modal');
-const copyGameCodeBtnModal = document.getElementById('copy-game-code-modal');
-const cancelOnlineGameBtnModal = document.getElementById('cancel-online-game-modal'); // This is the 'Cancel' in share code modal
-const btnCloseShareCode = document.querySelector('.btn-close-share-code'); // Close button for share code modal
+const lobbyDetailsModal = document.getElementById('lobby-details-modal');
+const btnCloseLobbyDetailsModal = document.querySelector('.btn-close-lobby-details-modal');
 
+const joinPrivateLobbyModal = document.getElementById('join-private-lobby-modal');
+const joinPrivateLobbyPasswordInputModal = document.getElementById('join-private-lobby-password-modal');
+const btnJoinPrivateLobbySubmitModal = document.getElementById('btn-join-private-lobby-submit-modal');
+const btnCloseJoinPrivateLobbyModal = document.querySelector('.btn-close-join-private-lobby-modal');
+const btnCancelJoinPrivateLobbyModal = document.querySelector('.btn-cancel-join-private-lobby-modal');
 
-const joinLobbyForm = document.getElementById('join-lobby-form'); // This remains an in-line sub-section
+const joinLobbyForm = document.getElementById('join-lobby-form');
 const joinLobbyCodeInput = document.getElementById('join-lobby-code');
 const joinLobbyPasswordInput = document.getElementById('join-lobby-password');
 const btnJoinPrivateLobbySubmit = document.getElementById('btn-join-private-lobby-submit');
-
 
 const currentLobbyDetails = document.getElementById('current-lobby-details');
 const lobbyDetailsName = document.getElementById('lobby-details-name');
@@ -55,83 +58,70 @@ const kickPlayerSelect = document.getElementById('kick-player-select');
 const btnKickPlayer = document.getElementById('btn-kick-player');
 const btnCloseLobby = document.getElementById('btn-close-lobby');
 
+
 let currentLobby = null;
 let myUserId = null;
 let myUsername = 'Guest';
 
-/**
- * Helper to show a modal.
- * @param {HTMLElement} modalElement - The modal div to show.
- */
+// REMOVED the local showModal/hideModal functions as they are now imported from main.js
+/*
+// Original local showModal
 function showModal(modalElement) {
     if (!modalBackdrop) {
         console.error("showModal: modalBackdrop element not found!");
         return;
     }
-    modalBackdrop.classList.add('show'); // Use 'show' class as defined in main.js/style.css
-    if (modalElement) modalElement.classList.add('show'); // Add null check for modalElement too
+    modalBackdrop.classList.add('show');
+    if (modalElement) modalElement.classList.add('show');
 }
 
-/**
- * Helper to hide a modal.
- * @param {HTMLElement} modalElement - The modal div to hide.
- */
+// Original local hideModal
 function hideModal(modalElement) {
-    if (modalElement) modalElement.classList.remove('show'); // Use 'show' class
-
+    if (modalElement) modalElement.classList.remove('show');
     const isCreateLobbyActive = createLobbyModal && createLobbyModal.classList.contains('show');
-    const isShareGameCodeActive = shareGameCodeModal && shareGameCodeModal.classList.contains('show');
-
-    if (!isCreateLobbyActive && !isShareGameCodeActive) {
+    const isLobbyDetailsActive = lobbyDetailsModal && lobbyDetailsModal.classList.contains('show');
+    const isJoinPrivateLobbyActive = joinPrivateLobbyModal && joinPrivateLobbyModal.classList.contains('show');
+    if (!isCreateLobbyActive && !isLobbyDetailsActive && !isJoinPrivateLobbyActive) {
         if (modalBackdrop) {
-            modalBackdrop.classList.remove('show'); // Use 'show' class
+            modalBackdrop.classList.remove('show');
         } else {
             console.warn("hideModal: modalBackdrop element not found when trying to hide it.");
         }
     }
 }
+*/
 
-/**
- * Initiates leaving the current online lobby (sends to server)
- * and resets the lobby.js UI state to show the lobby list.
- * This function is exported for main.js to call.
- */
 export function leaveOnlineLobbyConnection() {
     const socket = getSocket();
     if (isSocketConnected()) {
         console.log("Client emitting lobby:leave.");
         socket.emit('lobby:leave');
     }
-    currentLobby = null; // Clear client's current lobby state
+    currentLobby = null;
 
-    // Ensure all modals are hidden (using the new correct 'show' class)
+    // Use imported hideModal
     if (createLobbyModal) hideModal(createLobbyModal);
-    if (shareGameCodeModal) hideModal(shareGameCodeModal);
+    if (lobbyDetailsModal) hideModal(lobbyDetailsModal);
+    if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal);
 
-    // Reset UI state to show the main lobby list (within online-menu)
-    hideAllSubSections(); // Hides current-lobby-details, join-lobby-form etc.
-    if (lobbySection) lobbySection.style.display = 'block'; // Ensure parent lobby section is visible
-    if (lobbyListContainer) lobbyListContainer.style.display = 'block'; // Show lobby list
+    hideAllSubSections();
+    if (lobbySection) lobbySection.style.display = 'block';
+    if (lobbyListContainer) lobbyListContainer.style.display = 'block';
 
-    if (lobbyListContainer) lobbyListContainer.innerHTML = '<p>Loading lobbies...</p>'; // Display placeholder while refreshing
+    if (lobbyListContainer) lobbyListContainer.innerHTML = '<p>Loading lobbies...</p>';
     if (isSocketConnected()) {
-        socket.emit('lobby:list:fetch'); // Request an updated list
+        socket.emit('lobby:list:fetch');
     }
-    // Do NOT transition screens (e.g., to 'main-menu') here. main.js will handle that if needed.
 }
 
 
-/**
- * Initializes the online lobby UI and event listeners.
- * @param {Function} updateConnectionStatusCb - Callback to update UI connection status.
- */
 export function initLobbyUI(updateConnectionStatusCb) {
     if (localStorage.getItem('damaUsername')) {
         usernameInput.value = localStorage.getItem('damaUsername');
         myUsername = usernameInput.value;
     }
 
-    serverUrlInput.value = localStorage.getItem('damaServerUrl') || `${location.protocol}//${location.hostname}:4000`;
+    serverUrlInput.value = localStorage.getItem('damaServerUrl') || `${location.protocol}//${location.hostname}:8000`;
 
     btnConnectServer.addEventListener('click', () => {
         const username = usernameInput.value.trim();
@@ -151,8 +141,7 @@ export function initLobbyUI(updateConnectionStatusCb) {
 
         const socket = connectSocket(serverUrl, updateConnectionStatusCb);
         if (socket) {
-            // Only emit user:hello once connected
-            socket.off('connect'); // Remove previous 'connect' listener if exists
+            socket.off('connect');
             socket.on('connect', () => {
                 socket.emit('user:hello', { username: myUsername });
             });
@@ -173,14 +162,17 @@ export function initLobbyUI(updateConnectionStatusCb) {
 
     if (btnShowCreateLobby) {
         btnShowCreateLobby.addEventListener('click', () => {
-            // Clear previous values in modal form
+            if (!isSocketConnected()) {
+                showMessage("Please connect to the server first.", 'red');
+                return;
+            }
             if (createLobbyNameInputModal) createLobbyNameInputModal.value = `${myUsername}'s Game`;
             if (createLobbyPrivacySelectModal) createLobbyPrivacySelectModal.value = 'public';
             if (createLobbyPasswordInputModal) {
                 createLobbyPasswordInputModal.value = '';
-                createLobbyPasswordInputModal.style.display = 'none'; // Hide password by default
+                createLobbyPasswordInputModal.style.display = 'none';
             }
-            if (createLobbyModal) showModal(createLobbyModal); // Show the create lobby modal
+            if (createLobbyModal) showModal(createLobbyModal); // Use imported showModal
         });
     }
 
@@ -210,23 +202,19 @@ export function initLobbyUI(updateConnectionStatusCb) {
             socket.emit('lobby:create', { name, privacy, password }, (response) => {
                 if (response.success) {
                     showMessage(`Lobby "${name}" created!`, 'green');
-                    if (createLobbyModal) hideModal(createLobbyModal); // Hide create modal
-                    if (gameCodeDisplayModal) gameCodeDisplayModal.value = response.joinCode || 'N/A (Public Lobby)';
-                    if (shareGameCodeModal) showModal(shareGameCodeModal); // Show share code modal
-                    currentLobby = { id: response.lobbyId, isHost: true, joinCode: response.joinCode, privacy };
-                    // lobby:updated will follow from server to render full details in current-lobby-details
+                    if (createLobbyModal) hideModal(createLobbyModal); // Use imported hideModal
+                    
+                    currentLobby = { 
+                        id: response.lobbyId, 
+                        isHost: true, 
+                        joinCode: response.joinCode, 
+                        privacy,
+                        players: {}
+                    };
                 } else {
                     showMessage(`Error creating lobby: ${response.message}`, 'red');
                 }
             });
-        });
-    }
-
-    if (copyGameCodeBtnModal && gameCodeDisplayModal) {
-        copyGameCodeBtnModal.addEventListener('click', () => {
-            gameCodeDisplayModal.select();
-            document.execCommand('copy');
-            showMessage('Game code copied!', 'green');
         });
     }
 
@@ -238,35 +226,23 @@ export function initLobbyUI(updateConnectionStatusCb) {
         });
     }
 
-    // Cancel button in the Share Game Code Modal
-    if (cancelOnlineGameBtnModal) {
-        cancelOnlineGameBtnModal.addEventListener('click', () => {
-            if (shareGameCodeModal) hideModal(shareGameCodeModal); // Hide share code modal
-            leaveOnlineLobbyConnection(); // Leave the lobby and reset to lobby list
-            showScreen('online-menu'); // Ensure we're on the online menu screen
-        });
-    }
-
-    // Close button for Share Game Code Modal
-    if (btnCloseShareCode) {
-        btnCloseShareCode.addEventListener('click', () => {
-            if (shareGameCodeModal) hideModal(shareGameCodeModal);
-            leaveOnlineLobbyConnection(); // Leave the lobby if closed
-            showScreen('online-menu');
-        });
-    }
-
-    // Close button for Create Lobby Modal
     if (btnCloseCreateLobby) {
         btnCloseCreateLobby.addEventListener('click', () => {
-            if (createLobbyModal) hideModal(createLobbyModal);
+            if (createLobbyModal) hideModal(createLobbyModal); // Use imported hideModal
         });
     }
 
-    // Cancel button for Create Lobby Modal
     if (btnCancelCreateLobby) {
         btnCancelCreateLobby.addEventListener('click', () => {
-            if (createLobbyModal) hideModal(createLobbyModal);
+            if (createLobbyModal) hideModal(createLobbyModal); // Use imported hideModal
+        });
+    }
+
+    if (btnCloseLobbyDetailsModal) {
+        btnCloseLobbyDetailsModal.addEventListener('click', () => {
+            if (lobbyDetailsModal) hideModal(lobbyDetailsModal); // Use imported hideModal
+            leaveOnlineLobbyConnection();
+            showScreen('online-menu');
         });
     }
 
@@ -289,10 +265,11 @@ export function initLobbyUI(updateConnectionStatusCb) {
             socket.emit('lobby:join', { code, password }, (response) => {
                 if (response.success) {
                     showMessage(`Joined lobby!`, 'green');
-                    hideAllSubSections();
-                    if (currentLobbyDetails) currentLobbyDetails.style.display = 'flex';
-                    currentLobby = { id: response.lobbyId, isHost: false };
-                    // Lobby:updated will be sent from server to render full details
+                    currentLobby = { 
+                        id: response.lobbyId, 
+                        isHost: false,
+                        players: {}
+                    };
                 } else {
                     showMessage(`Error joining lobby: ${response.message}`, 'red');
                 }
@@ -300,11 +277,69 @@ export function initLobbyUI(updateConnectionStatusCb) {
         });
     }
 
+    if (btnJoinPrivateLobbySubmitModal) {
+        btnJoinPrivateLobbySubmitModal.addEventListener('click', () => {
+            const socket = getSocket();
+            if (!isSocketConnected()) {
+                showMessage("Not connected to server.", 'red');
+                return;
+            }
+
+            const lobbyIdToJoin = joinPrivateLobbyModal.dataset.lobbyId;
+            const password = joinPrivateLobbyPasswordInputModal ? joinPrivateLobbyPasswordInputModal.value.trim() : '';
+
+            if (!lobbyIdToJoin) {
+                showMessage("Error: Lobby ID not found for joining.", 'red');
+                return;
+            }
+
+            socket.emit('lobby:join', { lobbyId: lobbyIdToJoin, password: password }, (response) => {
+                if (response.success) {
+                    showMessage(`Joined lobby!`, 'green');
+                    hideModal(joinPrivateLobbyModal); // Use imported hideModal
+                    currentLobby = { 
+                        id: response.lobbyId, 
+                        isHost: false,
+                        players: {}
+                    };
+                } else {
+                    showMessage(`Error joining lobby: ${response.message}`, 'red');
+                    if (joinPrivateLobbyPasswordInputModal) joinPrivateLobbyPasswordInputModal.value = '';
+                }
+            });
+        });
+    }
+
+    if (btnCloseJoinPrivateLobbyModal) {
+        btnCloseJoinPrivateLobbyModal.addEventListener('click', () => {
+            if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal); // Use imported hideModal
+            hideAllSubSections();
+            if (lobbyListContainer) lobbyListContainer.style.display = 'block';
+            if (isSocketConnected()) {
+                getSocket().emit('lobby:list:fetch');
+            }
+        });
+    }
+    if (btnCancelJoinPrivateLobbyModal) {
+        btnCancelJoinPrivateLobbyModal.addEventListener('click', () => {
+            if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal); // Use imported hideModal
+            hideAllSubSections();
+            if (lobbyListContainer) lobbyListContainer.style.display = 'block';
+            if (isSocketConnected()) {
+                getSocket().emit('lobby:list:fetch');
+            }
+        });
+    }
+
+
     if (btnReadyToggle) {
         btnReadyToggle.addEventListener('click', () => {
             const socket = getSocket();
             if (!isSocketConnected() || !currentLobby || !currentLobby.id || !myUserId) return;
-
+            if (!currentLobby.players) {
+                console.error("currentLobby.players is undefined when toggling ready state.");
+                return;
+            }
             const player = currentLobby.players[myUserId];
             if (player) {
                 const newReadyState = !player.ready;
@@ -317,12 +352,22 @@ export function initLobbyUI(updateConnectionStatusCb) {
         btnStartGameHost.addEventListener('click', () => {
             const socket = getSocket();
             if (!isSocketConnected() || !currentLobby || !currentLobby.id) return;
-
-            const myPlayer = currentLobby.players[myUserId];
-            if (myPlayer && !myPlayer.ready) {
-                socket.emit('lobby:ready:set', { ready: true }); // Host signals ready if not already
+            if (!currentLobby.players) {
+                console.error("currentLobby.players is undefined when starting game.");
+                return;
             }
-            showMessage("Attempting to start game...", 'blue');
+            const myPlayer = currentLobby.players[myUserId];
+            // Host signals ready if not already, then requests game start
+            if (myPlayer && !myPlayer.ready) {
+                socket.emit('lobby:ready:set', { ready: true });
+                setTimeout(() => {
+                    socket.emit('lobby:start'); // Emit this event to the server to explicitly start
+                    showMessage("Attempting to start game...", 'blue');
+                }, 100); // Small delay to ensure ready status propagates
+            } else {
+                socket.emit('lobby:start'); // Emit this event to the server to explicitly start
+                showMessage("Attempting to start game...", 'blue');
+            }
         });
     }
 
@@ -337,7 +382,10 @@ export function initLobbyUI(updateConnectionStatusCb) {
     if (btnCloseLobby) {
         btnCloseLobby.addEventListener('click', () => {
             if (currentLobby && currentLobby.isHost) {
-                leaveOnlineLobbyConnection();
+                const socket = getSocket();
+                if (isSocketConnected()) {
+                    socket.emit('lobby:close', { lobbyId: currentLobby.id });
+                }
             } else {
                 leaveOnlineLobbyConnection();
             }
@@ -348,21 +396,25 @@ export function initLobbyUI(updateConnectionStatusCb) {
     if (btnKickPlayer) {
         btnKickPlayer.addEventListener('click', () => {
             const socket = getSocket();
-            if (isSocketConnected() && currentLobby && currentLobby.isHost) {
+            if (isSocketConnected() && currentLobby && currentLobby.isHost && currentLobby.players) {
                 const playerIdToKick = kickPlayerSelect ? kickPlayerSelect.value : '';
                 if (playerIdToKick && playerIdToKick !== myUserId) {
-                    console.warn(`Host requested to kick player ${playerIdToKick}. Server-side 'lobby:kick' event not fully implemented.`);
-                    showMessage("Kick functionality is a placeholder. Opponent must leave manually for now.", 'red');
+                    socket.emit('lobby:kick', { lobbyId: currentLobby.id, playerId: playerIdToKick });
+                    showMessage(`Attempting to kick player ${currentLobby.players[playerIdToKick]?.username}...`, 'blue');
                 } else if (playerIdToKick === myUserId) {
                     showMessage("You cannot kick yourself.", 'red');
+                } else {
+                    showMessage("Select a player to kick.", 'red');
                 }
             }
         });
     }
 
-    // Back buttons
     document.querySelectorAll('.back-to-lobby-list').forEach(button => {
         button.addEventListener('click', () => {
+            if (lobbyDetailsModal) hideModal(lobbyDetailsModal); // Use imported hideModal
+            if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal); // Use imported hideModal
+
             hideAllSubSections();
             if (lobbyListContainer) lobbyListContainer.style.display = 'block';
             if (isSocketConnected()) {
@@ -403,16 +455,19 @@ function setupSocketListeners(socket) {
     socket.on('lobby:updated', (payload) => {
         const lobby = payload.lobby;
         if (currentLobby && currentLobby.id === lobby.id) {
-            currentLobby = { ...currentLobby, ...lobby }; // Merge new details
+            currentLobby = { ...currentLobby, ...lobby };
         } else if (lobby.players[myUserId]) {
             currentLobby = { ...lobby, isHost: lobby.hostId === myUserId };
             hideAllSubSections();
-            if (currentLobbyDetails) currentLobbyDetails.style.display = 'flex';
-            // FIX: Explicitly hide the shareGameCodeModal when lobby is updated and a player has joined
-            if (shareGameCodeModal) {
-                hideModal(shareGameCodeModal);
-            }
+            if (lobbyDetailsModal) showModal(lobbyDetailsModal); // Use imported showModal
+            if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal); // Use imported hideModal
         } else {
+            if (!currentLobby) {
+                const socket = getSocket();
+                if (isSocketConnected()) {
+                    socket.emit('lobby:list:fetch');
+                }
+            }
             return;
         }
         renderLobbyDetails(currentLobby);
@@ -424,6 +479,11 @@ function setupSocketListeners(socket) {
             showMessage(`Lobby "${currentLobby.name}" was closed by host.`, 'red');
             leaveOnlineLobbyConnection();
             showScreen('online-menu');
+        } else {
+            const socket = getSocket();
+            if (isSocketConnected()) {
+                socket.emit('lobby:list:fetch');
+            }
         }
     });
 
@@ -433,8 +493,13 @@ function setupSocketListeners(socket) {
         const myPlayer = payload.players[myUserId];
         if (myPlayer) {
             showMessage(`Game started! You are ${myPlayer.color}.`, 'green');
-            if (shareGameCodeModal) hideModal(shareGameCodeModal);
+            
+            if (lobbyDetailsModal) {
+                console.log("[game:start] Hiding lobbyDetailsModal.");
+                hideModal(lobbyDetailsModal); // Use imported hideModal
+            }
             showScreen('game-screen');
+            
             setupGame('online', myPlayer.color, getSocket(), payload.lobbyId, payload.initialBoard, payload.turn);
         } else {
             showMessage("Could not determine your player info for the game.", 'red');
@@ -453,6 +518,12 @@ function setupSocketListeners(socket) {
         showMessage(`Server Error: ${payload.message} (Code: ${payload.code})`, 'red');
         console.error('Server error:', payload);
     });
+    // NEW: Listen for generic server messages
+    socket.off('message');
+    socket.on('message', (payload) => {
+        showMessage(payload.text, payload.type || 'info');
+        console.log(`[Server Message] Type: ${payload.type}, Text: ${payload.text}`);
+    });
 
     socket.off('disconnect');
     socket.on('disconnect', (reason) => {
@@ -470,7 +541,7 @@ function renderLobbyList(lobbies) {
     }
     lobbyListContainer.innerHTML = '';
     if (lobbies.length === 0) {
-        lobbyListContainer.innerHTML = '<p>No public lobbies available. Create one!</p>';
+        lobbyListContainer.innerHTML = '<p>No lobbies available. Create one!</p>';
         return;
     }
 
@@ -478,27 +549,48 @@ function renderLobbyList(lobbies) {
         const lobbyItem = document.createElement('div');
         lobbyItem.className = 'lobby-item';
         lobbyItem.dataset.lobbyId = lobby.id;
+        const privacyIndicator = lobby.privacy === 'private' ? ' (Private)' : '';
         lobbyItem.innerHTML = `
-            <span>${lobby.name} (Host: ${lobby.hostUsername})</span>
+            <span>${lobby.name}${privacyIndicator} (Host: ${lobby.hostUsername})</span>
             <span class="player-count">(${lobby.playerCount}/2)</span>
             <span class="lobby-status">${lobby.status === 'in-game' ? 'In Game' : 'Waiting'}</span>
         `;
         if (lobby.playerCount < 2 && lobby.status === 'waiting') {
             lobbyItem.addEventListener('click', () => {
+                console.log(`[LobbyClick] Lobby item "${lobby.name}" (ID: ${lobby.id}, Privacy: ${lobby.privacy}) clicked.`);
                 const socket = getSocket();
-                if (isSocketConnected()) {
+                if (!isSocketConnected()) {
+                    showMessage("Not connected to server.", 'red');
+                    console.log('[LobbyClick] Not connected to server, stopping.');
+                    return;
+                }
+                console.log('[LobbyClick] Socket is connected.');
+
+                if (lobby.privacy === 'private') {
+                    console.log('[LobbyClick] Lobby is private. Attempting to show password modal.');
+                    if (joinPrivateLobbyModal) {
+                        joinPrivateLobbyModal.dataset.lobbyId = lobby.id;
+                        joinPrivateLobbyPasswordInputModal.value = '';
+                        showModal(joinPrivateLobbyModal); // Use imported showModal
+                        console.log('[LobbyClick] joinPrivateLobbyModal should now be visible.');
+                    } else {
+                        console.error('[LobbyClick] ERROR: joinPrivateLobbyModal element not found!');
+                    }
+                } else {
+                    console.log('[LobbyClick] Lobby is public. Attempting to join directly.');
                     socket.emit('lobby:join', { lobbyId: lobby.id }, (response) => {
+                        console.log('[LobbyClick] Server response to lobby:join:', response);
                         if (response.success) {
                             showMessage(`Joined lobby "${lobby.name}"!`, 'green');
-                            hideAllSubSections();
-                            if (currentLobbyDetails) currentLobbyDetails.style.display = 'flex';
-                            currentLobby = { id: lobby.id, isHost: false };
+                            currentLobby = { 
+                                id: response.lobbyId, 
+                                isHost: false,
+                                players: {} 
+                            };
                         } else {
                             showMessage(`Error joining lobby: ${response.message}`, 'red');
                         }
                     });
-                } else {
-                    showMessage("Not connected to server.", 'red');
                 }
             });
         } else {
@@ -511,12 +603,11 @@ function renderLobbyList(lobbies) {
 
 function renderLobbyDetails(lobby) {
     if (!lobby) {
-        if (currentLobbyDetails) currentLobbyDetails.style.display = 'none';
+        if (lobbyDetailsModal) hideModal(lobbyDetailsModal); // Use imported hideModal
         return;
     }
 
-    hideAllSubSections();
-    if (currentLobbyDetails) currentLobbyDetails.style.display = 'flex';
+    if (lobbyDetailsModal) showModal(lobbyDetailsModal); // Use imported showModal
 
     if (lobbyDetailsName) lobbyDetailsName.textContent = lobby.name;
     if (lobbyDetailsStatus) lobbyDetailsStatus.textContent = lobby.status === 'in-game' ? 'In Game' : 'Waiting';
@@ -526,7 +617,7 @@ function renderLobbyDetails(lobby) {
     if (lobbyDetailsCode) lobbyDetailsCode.value = lobby.joinCode || '';
 
     if (lobbyDetailsPlayers) lobbyDetailsPlayers.innerHTML = '';
-    const playerArr = Object.values(lobby.players);
+    const playerArr = Object.values(lobby.players || {});
     playerArr.forEach(player => {
         const li = document.createElement('li');
         li.textContent = `${player.username} ${player.socketId === lobby.hostId ? '(Host)' : ''} - ${player.ready ? 'Ready' : 'Not Ready'}`;
@@ -538,13 +629,14 @@ function renderLobbyDetails(lobby) {
     
     if (btnReadyToggle) btnReadyToggle.style.display = 'block';
     
+    // This is the button that starts the game. Its visibility/disabled state is crucial.
     if (btnStartGameHost) btnStartGameHost.style.display = isMyHost ? 'block' : 'none';
     
     if (hostControls) hostControls.style.display = isMyHost ? 'block' : 'none';
     
     if (btnLeaveLobby) btnLeaveLobby.style.display = 'block';
 
-    const myPlayer = lobby.players[myUserId];
+    const myPlayer = lobby.players && lobby.players[myUserId];
     if (myPlayer) {
         if (btnReadyToggle) {
             btnReadyToggle.textContent = myPlayer.ready ? 'Unready' : 'Ready';
@@ -554,9 +646,10 @@ function renderLobbyDetails(lobby) {
 
     if (isMyHost) {
         const allReady = playerArr.length === 2 && playerArr.every(p => p.ready);
+        // CRITICAL FIX: Disable Start Game button if not all ready or not enough players
         if (btnStartGameHost) {
-            btnStartGameHost.disabled = !allReady || lobby.status === 'in-game';
-            btnStartGameHost.style.backgroundColor = allReady ? '#27ae60' : '#7f8c8d';
+            btnStartGameHost.disabled = !allReady || lobby.status === 'in-game' || playerArr.length < 2;
+            btnStartGameHost.style.backgroundColor = btnStartGameHost.disabled ? '#7f8c8d' : '#27ae60';
         }
 
         if (kickPlayerSelect) kickPlayerSelect.innerHTML = '';
@@ -566,13 +659,13 @@ function renderLobbyDetails(lobby) {
             option.textContent = p.username;
             if (kickPlayerSelect) kickPlayerSelect.appendChild(option);
         });
-        if (btnKickPlayer) btnKickPlayer.disabled = playerArr.length <= 1;
+        if (btnKickPlayer) btnKickPlayer.disabled = playerArr.length <= 1; // Kick disabled if only host in lobby
     }
 }
 
 function hideAllSubSections() {
     if (joinLobbyForm) joinLobbyForm.style.display = 'none';
-    if (currentLobbyDetails) currentLobbyDetails.style.display = 'none';
+    if (lobbyListContainer) lobbyListContainer.style.display = 'none';
 }
 
 export function updateConnectionStatus(statusText) {
@@ -594,6 +687,7 @@ export function updateConnectionStatus(statusText) {
         
         // Ensure modals are hidden if connection is lost
         if (createLobbyModal) hideModal(createLobbyModal);
-        if (shareGameCodeModal) hideModal(shareGameCodeModal);
+        if (lobbyDetailsModal) hideModal(lobbyDetailsModal); // Use imported hideModal
+        if (joinPrivateLobbyModal) hideModal(joinPrivateLobbyModal); // Use imported hideModal
     }
 }

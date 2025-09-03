@@ -142,13 +142,6 @@ h2 {
     min-height: 50vh; /* From original */
     margin: 20px auto; /* From original */
     position: relative;
-    /* Removed redundant opacity/transform settings, let .screen.active manage active states */
-}
-
-/* Override .screen properties for stacking behavior within #game-container */
-#main-menu.screen, #single-player-menu.screen, #online-menu.screen, #result-screen.screen {
-    position: relative;
-    /* Removed redundant display/opacity/transform settings, let .screen and .screen.active manage them */
 }
 
 #main-menu.screen.active, #single-player-menu.screen.active, #online-menu.screen.active, #result-screen.screen.active {
@@ -269,7 +262,6 @@ button.back-button:hover {
     text-align: center; /* Keep text centered within its own flex item */
     margin: 0; /* Remove horizontal margin, let gap handle it */
     min-width: 150px; /* Keep a minimum width */
-    /* NEW: Allow text to wrap naturally to prevent pushing undo aggressively */
     white-space: normal; /* Allow text to wrap */
     text-overflow: unset; /* Clear ellipsis if it was set */
 }
@@ -548,100 +540,97 @@ button.back-button:hover {
 }
 
 /* --- Modal Styles (Updated from new menu-modal.css and animations.css) --- */
-.modal-backdrop { /* Renamed from .modal-overlay to match new CSS */
+.modal-backdrop {
+    display: none; /* CRITICAL: Hide by default */
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(26, 32, 44, 0.6); /* New background color */
+    background: rgba(26, 32, 44, 0.6);
     z-index: 1000;
-    opacity: 0; /* From new animations.css */
-    transition: opacity 0.3s ease-out; /* From new animations.css */
-    pointer-events: none; /* Ensure backdrop is not clickable by default */
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    pointer-events: none;
 }
 
-.modal-backdrop.show { /* New class for showing backdrop */
+.modal-backdrop.show {
+    display: block; /* CRITICAL: Show it when 'show' is present */
     opacity: 1;
-    pointer-events: auto; /* Only clickable when shown */
+    pointer-events: auto;
 }
 
 .modal {
+    display: none; /* CRITICAL: Hide by default */
     position: fixed;
     top: 50%;
     left: 50%;
     width: 90%;
-    max-width: 400px; /* New max-width */
-    background: rgba(255, 255, 255, 0.05); /* Frosted glass background */
-    backdrop-filter: blur(10px); /* Frosted glass blur */
-    -webkit-backdrop-filter: blur(10px); /* Webkit support */
-    border-radius: 12px; /* New border radius */
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6); /* New shadow */
-    color: var(--text-light); /* New text color */
-    padding: 2em; /* New padding */
-    transform: translate(-50%, -50%); /* Centering */
+    max-width: 400px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    color: var(--text-light);
+    padding: 2em;
+    transform: translate(-50%, -50%);
     z-index: 1001;
-    opacity: 0; /* From new animations.css */
-    transition: opacity 0.3s ease-out, transform 0.3s ease-out; /* From new animations.css */
-    display: flex; /* Ensure content stacks correctly (from original .modal) */
-    flex-direction: column; /* Ensure content stacks correctly (from original .modal) */
-    align-items: center; /* Ensure content stacks correctly (from original .modal) */
-    pointer-events: none; /* Ensure modal is not clickable by default */
+    opacity: 0;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
 }
 
-.modal.show { /* New class for showing modal */
+.modal.show {
+    display: flex; /* CRITICAL: Show it with flex when 'show' is present */
     opacity: 1;
-    transform: translate(-50%, -50%); /* Ensures it slides to center */
-    pointer-events: auto; /* Only clickable when shown */
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
 }
 
-/* Removed .modal-content as it's no longer needed with new .modal styling */
-/* .modal-content {
-    width: 100%;
-    text-align: center;
-} */
-
-.modal h4 { /* Target h4 directly within modal */
+.modal h4 {
     color: var(--text-light);
     margin-top: 0;
     margin-bottom: 20px;
     font-size: 1.8em;
 }
 
-.modal p { /* Target p directly within modal */
+.modal p {
     margin-bottom: 15px;
-    color: var(--text-light); /* Adjusted color */
+    color: var(--text-light);
 }
 
 .modal input[type="text"],
 .modal input[type="password"],
 .modal select {
-    width: calc(100% - 20px); /* Adjusted to consider modal padding */
+    width: calc(100% - 20px);
     margin-bottom: 15px;
-    background-color: var(--text-light); /* Light background for inputs */
-    color: var(--bg-dark); /* Dark text for inputs */
-    border: 1px solid var(--dark-square); /* Adjusted border color */
+    background-color: var(--text-light);
+    color: var(--bg-dark);
+    border: 1px solid var(--dark-square);
     padding: 10px;
     border-radius: 5px;
     font-size: 1em;
     box-sizing: border-box;
 }
 
-.modal button { /* Buttons inside modals */
+.modal button {
     width: auto;
     min-width: 150px;
     margin-top: 5px;
     margin-bottom: 5px;
 }
 
-.close-btn { /* Renamed from .modal-close-button to match new CSS */
+.close-btn {
     position: absolute;
-    top: 12px; /* New position */
-    right: 12px; /* New position */
-    background: transparent; /* New background */
+    top: 12px;
+    right: 12px;
+    background: transparent;
     border: none;
-    font-size: 1.25rem; /* New font size */
-    color: var(--text-light); /* New color */
+    font-size: 1.25rem;
+    color: var(--text-light);
     cursor: pointer;
     line-height: 1;
     padding: 0;
@@ -653,9 +642,9 @@ button.back-button:hover {
 }
 
 .close-btn:hover {
-    color: var(--accent-highlight); /* New hover color */
+    color: var(--accent-highlight);
     background: none;
-    transform: none; /* Removed rotate on hover to be cleaner */
+    transform: none;
 }
 
 /* --- Media Queries (Combined and updated from new responsive.css and original) --- */
@@ -666,41 +655,38 @@ button.back-button:hover {
     #game-info {
         font-size: 1em;
         padding: 0;
-        /* Default flex behavior will handle most of the wrapping. */
-        /* We need to ensure message-area and btn-undo don't fight too much for space. */
-        justify-content: center; /* On smaller screens, center content when it wraps */
+        justify-content: center;
     }
     #turn-indicator {
-        margin: 5px auto; /* Center when it wraps */
+        margin: 5px auto;
         width: 100%;
-        max-width: 100%; /* Allow it to take full width */
+        max-width: 100%;
     }
     #message-area {
-        margin: 5px auto; /* Center when it wraps */
+        margin: 5px auto;
         width: 100%;
-        max-width: 100%; /* Allow it to take full width */
-        white-space: normal; /* Allow text to wrap on small screens */
+        max-width: 100%;
+        white-space: normal;
         text-overflow: unset;
-        flex-basis: auto; /* Allow it to take up space as needed */
+        flex-basis: auto;
     }
     #btn-undo {
-        margin: 5px auto; /* Center when it wraps to its own line */
+        margin: 5px auto;
         width: 100%;
-        max-width: 150px; /* Keep undo button size reasonable */
+        max-width: 150px;
     }
 
-    #board-container.board { /* Target with new class */
-        width: 100%; /* From new responsive.css */
-        max-width: 350px; /* From new responsive.css */
-        border-width: 2px; /* From original */
+    #board-container.board {
+        width: 100%;
+        max-width: 350px;
+        border-width: 2px;
     }
-    .square { /* No fixed width/height, let grid handle it */ }
-    .piece { width: 70%; height: 70%; } /* Adjusted piece size */
-    button, .button { /* From new responsive.css */
+    .piece { width: 70%; height: 70%; }
+    button, .button {
         width: 100%;
         font-size: 1.1rem;
         padding: 1em;
-        margin: 8px auto; /* Centered buttons */
+        margin: 8px auto;
     }
     .piece.king::after { font-size: 1.8em; }
     #online-menu .online-setup-section,
@@ -711,7 +697,7 @@ button.back-button:hover {
         width: 100%;
         max-width: 100%;
     }
-    .modal { /* From new responsive.css */
+    .modal {
         width: 95%;
         max-width: 350px;
         padding: 1.5em;
@@ -725,33 +711,27 @@ button.back-button:hover {
     .piece.king::after { font-size: 1.5em; }
     #game-info {
         font-size: 0.9em;
-        flex-direction: column; /* This rule is critical for stacking info elements */
+        flex-direction: column;
     }
-    /* Ensure other elements within #game-info still behave */
     #turn-indicator, #message-area, #btn-undo {
-        width: 100%; /* Take full width of the column */
-        margin: 5px 0; /* Add vertical margin between stacked items */
+        width: 100%;
+        margin: 5px 0;
         text-align: center;
     }
-    #btn-undo { margin-top: 10px; max-width: 150px; margin-left: auto; margin-right: auto; } /* Re-center if alone on a line */
+    #btn-undo { margin-top: 10px; max-width: 150px; margin-left: auto; margin-right: auto; }
 }
-
-/* --- Modal Styles (Updated from new menu-modal.css and animations.css) --- */
-/* ... existing modal styles ... */
 
 .modal-buttons {
     display: flex;
     justify-content: center;
-    gap: 15px; /* Space between buttons */
-    margin-top: 20px; /* Space above buttons */
-    width: 100%; /* Ensure it takes full width to center buttons */
+    gap: 15px;
+    margin-top: 20px;
+    width: 100%;
 }
 
 .modal-buttons button {
-    margin: 0; /* Override default button margin to use gap instead */
-    width: auto; /* Allow buttons to size based on content */
-    min-width: 120px; /* Ensure a minimum width for readability */
-    max-width: 180px; /* Prevent buttons from becoming too wide */
+    margin: 0;
+    width: auto;
+    min-width: 120px;
+    max-width: 180px;
 }
-
-/* ... rest of your existing style.css ... */

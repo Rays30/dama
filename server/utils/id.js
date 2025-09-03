@@ -1,8 +1,8 @@
-import { nanoid } from 'nanoid';
+// dama/server/utils/id.js
+// CRITICAL FIX: Import nanoid as a Node.js module
+import { nanoid } from 'nanoid'; 
 
-/**
- * Generates a collision-resistant unique ID.
- * @param {number} length - The desired length of the ID.
- * @returns {string}
- */
-export const generateId = (length = 7) => nanoid(length);
+// Function to generate a short, URL-friendly ID
+export function generateId(length = 10) {
+    return nanoid(length);
+}

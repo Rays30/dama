@@ -1,3 +1,5 @@
+// dama/server/lobbies.js
+
 import { generateId } from './utils/id.js';
 import { GameSession } from './game.js';
 
@@ -13,8 +15,9 @@ const MAX_LOBBY_NAME_LENGTH = 30;
  * @property {string} hostUsername
  * @property {number} playerCount
  * @property {'waiting'|'in-game'} status
+ * @property {'public'|'private'} privacy
  * @property {number} createdAt
- * @property {string} region // Always 'LAN' for this implementation
+ * @property {string} region
  */
 
 /**
@@ -59,7 +62,7 @@ export class Lobbies {
 
     /**
      * Helper to emit updates to all players in a specific lobby.
-     * @param {SocketIO.Server} io
+     * @param {import("socket.io").Server} io
      * @param {string} lobbyId
      */
     _emitLobbyUpdate(io, lobbyId) {
@@ -85,9 +88,9 @@ export class Lobbies {
     }
 
     /**
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
-     * @param {import('./lobbies').LobbyCreatePayload} payload
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
+     * @param {{name: string, privacy: 'public'|'private', password?: string}} payload
      * @param {Function} cb
      */
     handleCreate(io, socket, payload, cb) {
@@ -96,7 +99,7 @@ export class Lobbies {
             return cb({ success: false, message: 'You must set a username first.' });
         }
         if (this.playerLobbyMap.has(socket.id)) {
-            return cb({ success: false, message: 'You are already in a lobby.' });
+            return cb({ success: false, message: "Already in a lobby." });
         }
 
         const name = this._sanitizeInput(payload.name);
@@ -117,7 +120,7 @@ export class Lobbies {
             privacy,
             password: password && password.length > 0 ? password : undefined,
             hostId: socket.id,
-            players: new Map([[socket.id, { socketId: socket.id, username, ready: false, color: null }]]),
+            players: new Map([[socket.id, { socketId: socket.id, username, ready: false, color: 'red' }]]), // Host is always red
             gameSession: null,
             status: 'waiting',
             joinCode,
@@ -128,19 +131,20 @@ export class Lobbies {
         this.playerLobbyMap.set(socket.id, lobbyId);
         socket.join(lobbyId);
 
-        console.log(`Lobby created: ${lobbyId} by ${username}. Privacy: ${privacy}`);
+        // FIX: Use newLobby.id instead of undefined newLobbyId
+        console.log(`Lobby created: ${newLobby.name} (ID: ${newLobby.id}) by ${username}. Privacy: ${privacy}`);
         if (privacy === 'private') {
             console.log(`  Join Code: ${joinCode}`);
         }
 
-        cb({ success: true, lobbyId, joinCode });
+        cb({ success: true, lobbyId: newLobby.id, joinCode: newLobby.joinCode });
         this._emitLobbyUpdate(io, lobbyId);
     }
 
     /**
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
-     * @param {import('./lobbies').LobbyJoinPayload} payload
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
+     * @param {{lobbyId?: string, code?: string, password?: string}} payload
      * @param {Function} cb
      */
     handleJoin(io, socket, payload, cb) {
@@ -153,25 +157,36 @@ export class Lobbies {
         }
 
         let lobby = null;
-        if (payload.lobbyId) { // Public lobby via ID
+        if (payload.lobbyId) { // Joining via lobbyId (from list click or direct ID input)
             lobby = this.lobbies.get(payload.lobbyId);
             if (!lobby) {
                 return cb({ success: false, message: 'Lobby not found.' });
             }
+
             if (lobby.privacy === 'private') {
-                return cb({ success: false, message: 'This is a private lobby, please use a code.' });
+                if (lobby.password && lobby.password.length > 0) {
+                    if (lobby.password !== this._sanitizeInput(payload.password)) {
+                        return cb({ success: false, message: 'Incorrect password for this private lobby.' });
+                    }
+                } else {
+                    console.log(`User ${username} joining private lobby ${lobby.id} without password.`);
+                }
             }
-        } else if (payload.code) { // Private lobby via code
+
+        } else if (payload.code) { // Joining via join code (usually for private lobbies)
             const code = this._sanitizeInput(payload.code);
             lobby = Array.from(this.lobbies.values()).find(l => l.joinCode === code);
             if (!lobby) {
                 return cb({ success: false, message: 'Private lobby not found with that code.' });
             }
-            if (lobby.password && lobby.password !== this._sanitizeInput(payload.password)) {
+            if (lobby.privacy !== 'private') {
+                return cb({ success: false, message: 'This is a public lobby, please join via its ID from the list.' });
+            }
+            if (lobby.password && lobby.password.length > 0 && lobby.password !== this._sanitizeInput(payload.password)) {
                 return cb({ success: false, message: 'Incorrect password for this private lobby.' });
             }
         } else {
-            return cb({ success: false, message: 'Invalid join request.' });
+            return cb({ success: false, message: 'Invalid join request: must provide lobbyId or code.' });
         }
 
         if (lobby.players.size >= 2) {
@@ -181,7 +196,11 @@ export class Lobbies {
             return cb({ success: false, message: 'Lobby is already in-game.' });
         }
 
-        lobby.players.set(socket.id, { socketId: socket.id, username, ready: false, color: null });
+        // Assign player color: the other color not taken by host
+        const hostPlayer = lobby.players.get(lobby.hostId);
+        const playerColor = hostPlayer.color === 'red' ? 'blue' : 'red';
+
+        lobby.players.set(socket.id, { socketId: socket.id, username, ready: false, color: playerColor });
         this.playerLobbyMap.set(socket.id, lobby.id);
         socket.join(lobby.id);
 
@@ -191,52 +210,52 @@ export class Lobbies {
     }
 
     /**
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
      */
     handleLeave(io, socket) {
         const lobbyId = this.playerLobbyMap.get(socket.id);
         if (!lobbyId) {
-            return; // Not in a lobby
+            console.log(`User ${socket.data.username || socket.id} tried to leave but was not in a lobby.`);
+            return;
         }
 
         const lobby = this.lobbies.get(lobbyId);
         if (!lobby) {
+            console.warn(`Lobby ${lobbyId} for user ${socket.data.username || socket.id} not found, cleaning up map.`);
             this.playerLobbyMap.delete(socket.id);
-            return; // Lobby somehow disappeared
+            return;
         }
+
+        const leftPlayerUsername = socket.data.username || socket.id;
 
         socket.leave(lobbyId);
         lobby.players.delete(socket.id);
         this.playerLobbyMap.delete(socket.id);
 
-        console.log(`${socket.data.username} left lobby ${lobbyId}`);
+        console.log(`${leftPlayerUsername} left lobby ${lobbyId}`);
 
         if (lobby.players.size === 0) {
-            // Lobby empty, destroy it
             this.lobbies.delete(lobbyId);
-            io.emit('lobby:destroyed', { lobbyId, message: `Lobby '${lobby.name}' was closed.` });
+            io.to(lobbyId).emit('lobby:destroyed', { lobbyId, message: `Lobby '${lobby.name}' was closed.` });
             console.log(`Lobby ${lobbyId} destroyed as it's empty.`);
         } else {
-            // If host left, assign new host (first player in map)
             if (lobby.hostId === socket.id) {
                 const newHostId = lobby.players.keys().next().value;
                 lobby.hostId = newHostId;
                 console.log(`New host for lobby ${lobbyId}: ${lobby.players.get(newHostId)?.username}`);
-                // Unready all players if game was about to start, new host needs to re-evaluate
                 lobby.players.forEach(p => p.ready = false);
             }
 
-            // If a game was in progress, end it
             if (lobby.gameSession && lobby.status === 'in-game') {
-                lobby.gameSession.endGame('forfeit', this._getOtherPlayerColor(lobby, socket.id));
+                const winningColor = this._getOtherPlayerColor(lobby, socket.id);
+                lobby.gameSession.endGame('forfeit', winningColor);
                 io.to(lobbyId).emit('game:end', {
                     reason: 'opponent_disconnected',
                     winner: lobby.gameSession.winner
                 });
                 lobby.status = 'waiting';
                 lobby.gameSession = null;
-                // Re-enable players to join/start new game in this lobby
                 lobby.players.forEach(p => p.ready = false);
             }
             this._emitLobbyUpdate(io, lobbyId);
@@ -245,32 +264,37 @@ export class Lobbies {
     }
 
     /**
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
      * @param {boolean} ready
      */
     handleReady(io, socket, ready) {
         const lobbyId = this.playerLobbyMap.get(socket.id);
-        if (!lobbyId) return;
+        if (!lobbyId) {
+            socket.emit('error', { code: 'NOT_IN_LOBBY', message: 'You are not in a lobby.' });
+            return;
+        }
 
         const lobby = this.lobbies.get(lobbyId);
-        if (!lobby || lobby.status !== 'waiting') return;
+        if (!lobby || lobby.status !== 'waiting') {
+            socket.emit('error', { code: 'LOBBY_UNAVAILABLE', message: 'Lobby is not in a waiting state.' });
+            return;
+        }
 
         const player = lobby.players.get(socket.id);
         if (player) {
             player.ready = ready;
             this._emitLobbyUpdate(io, lobbyId);
 
-            // Check if all players are ready and game can start
-            if (lobby.players.size === 2 && Array.from(lobby.players.values()).every(p => p.ready)) {
-                this._startGame(io, lobby);
+            if (lobby.players.size === 2 && Array.from(lobby.players.values()).every(p => p.ready) && lobby.hostId === socket.id) {
+                 io.to(socket.id).emit('message', {type: 'info', text: 'All players ready! Click "Start Game" when ready.'});
             }
         }
     }
 
     /**
      * Initiates a game session for a lobby.
-     * @param {SocketIO.Server} io
+     * @param {import("socket.io").Server} io
      * @param {Lobby} lobby
      */
     _startGame(io, lobby) {
@@ -278,27 +302,35 @@ export class Lobbies {
             console.warn(`Lobby ${lobby.id} already has an active game.`);
             return;
         }
+        if (lobby.players.size < 2) {
+             console.warn(`Lobby ${lobby.id} cannot start game: Not enough players (${lobby.players.size}/2).`);
+             return;
+        }
+        if (!Array.from(lobby.players.values()).every(p => p.ready)) {
+            console.warn(`Lobby ${lobby.id} cannot start game: Not all players are ready.`);
+            return;
+        }
 
         lobby.status = 'in-game';
 
-        // Assign colors deterministically (e.g., host is red, or random)
         const playerArray = Array.from(lobby.players.values());
-        const redPlayer = playerArray[0]; // First player (often host)
-        const bluePlayer = playerArray[1];
+        const redPlayer = playerArray.find(p => p.color === 'red');
+        const bluePlayer = playerArray.find(p => p.color === 'blue');
 
-        redPlayer.color = 'red';
-        bluePlayer.color = 'blue';
-
-        // Update lobby players map with colors
-        lobby.players.set(redPlayer.socketId, redPlayer);
-        lobby.players.set(bluePlayer.socketId, bluePlayer);
-
+        if (!redPlayer || !bluePlayer) {
+            console.error(`ERROR: Cannot start game in lobby ${lobby.id}. Missing player colors. Red: ${redPlayer?.username}, Blue: ${bluePlayer?.username}`);
+            io.to(lobby.id).emit('error', { code: 'GAME_START_FAILED', message: 'Failed to start game: player colors not assigned.' });
+            lobby.status = 'waiting';
+            this._emitLobbyUpdate(io, lobby.id);
+            return;
+        }
+        
         const gamePlayers = {
             [redPlayer.socketId]: { username: redPlayer.username, color: 'red', socketId: redPlayer.socketId },
             [bluePlayer.socketId]: { username: bluePlayer.username, color: 'blue', socketId: bluePlayer.socketId },
         };
 
-        const initialTurn = 'red'; // Red always starts in Dama
+        const initialTurn = 'red';
 
         const gameSession = new GameSession(lobby.id, gamePlayers, initialTurn);
         lobby.gameSession = gameSession;
@@ -307,18 +339,17 @@ export class Lobbies {
             lobbyId: lobby.id,
             players: gamePlayers,
             turn: initialTurn,
-            initialBoard: gameSession.getCurrentState().board // Send initial board state
+            initialBoard: gameSession.getCurrentState().board
         });
-        this._emitLobbyUpdate(io, lobby.id); // Update lobby status to in-game
-        console.log(`Game started for lobby ${lobby.id}. Red: ${redPlayer.username}, Blue: ${bluePlayer.username}`);
+        this._emitLobbyUpdate(io, lobby.id);
+        console.log(`Game started for lobby ${lobby.id}. Red: ${redPlayer.username} (${redPlayer.socketId}), Blue: ${bluePlayer.username} (${bluePlayer.socketId}).`);
     }
-
 
     /**
      * Relays game moves and validates turn.
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
-     * @param {import('./lobbies').GameMovePayload} move
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
+     * @param {{from: [number, number], to: [number, number], captures: Array<[number, number]>}} move
      */
     handleMove(io, socket, move) {
         const lobbyId = this.playerLobbyMap.get(socket.id);
@@ -326,6 +357,7 @@ export class Lobbies {
             return socket.emit('error', { code: 'NOT_IN_GAME', message: 'You are not in an active game.' });
         }
         const lobby = this.lobbies.get(lobbyId);
+        
         if (!lobby || !lobby.gameSession || lobby.status !== 'in-game') {
             return socket.emit('error', { code: 'GAME_NOT_ACTIVE', message: 'The game is not active.' });
         }
@@ -336,7 +368,6 @@ export class Lobbies {
             return socket.emit('error', { code: 'INVALID_MOVE', message: result.message });
         }
 
-        // Emit updated game state to both players in the lobby
         io.to(lobbyId).emit('game:move', {
             lobbyId: lobbyId,
             board: result.newState.board,
@@ -351,42 +382,151 @@ export class Lobbies {
                 winner: lobby.gameSession.winner
             });
             lobby.status = 'waiting';
-            lobby.gameSession = null; // Clear game session
-            // Reset ready states for next potential game
+            lobby.gameSession = null;
             lobby.players.forEach(p => p.ready = false);
             this._emitLobbyUpdate(io, lobbyId);
         }
     }
 
     /**
-     * @param {SocketIO.Server} io
-     * @param {SocketIO.Socket} socket
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
+     * @param {string} lobbyIdToClose
      */
-    handleDisconnect(io, socket) {
-        this.handleLeave(io, socket); // Disconnect is treated as a forced leave
+    handleCloseLobby(io, socket, lobbyIdToClose) {
+        const lobby = this.lobbies.get(lobbyIdToClose);
+        if (!lobby) {
+            socket.emit('error', { code: 'LOBBY_NOT_FOUND', message: 'Lobby not found.' });
+            console.warn(`Attempt to close non-existent lobby: ${lobbyIdToClose} by ${socket.data.username || socket.id}`);
+            return;
+        }
+        if (lobby.hostId !== socket.id) {
+            socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can close this lobby.' });
+            console.warn(`User ${socket.data.username || socket.id} (not host) attempted to close lobby ${lobbyIdToClose}.`);
+            return;
+        }
+
+        console.log(`Lobby ${lobbyIdToClose} (${lobby.name}) closed by host ${socket.data.username}.`);
+        
+        io.to(lobbyIdToClose).emit('lobby:destroyed', { lobbyId: lobbyIdToClose, message: `Lobby '${lobby.name}' was closed by the host.` });
+
+        lobby.players.forEach((player) => {
+            const playerSocket = io.sockets.sockets.get(player.socketId);
+            if (playerSocket) {
+                playerSocket.leave(lobbyIdToClose);
+                this.playerLobbyMap.delete(player.socketId);
+            }
+        });
+
+        this.lobbies.delete(lobbyIdToClose);
+        this._emitLobbyList(io);
     }
 
     /**
-     * Returns a list of public lobbies.
-     * @returns {Array<PublicLobbySummary>}
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
      */
+    handleDisconnect(io, socket) {
+        this.handleLeave(io, socket);
+    }
+
+    /**
+     * Host explicitly requests to start the game.
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} socket
+     */
+    handleStartGame(io, socket) {
+        const lobbyId = this.playerLobbyMap.get(socket.id);
+        if (!lobbyId) {
+            socket.emit('error', { code: 'NOT_IN_LOBBY', message: 'You are not in a lobby.' });
+            return;
+        }
+
+        const lobby = this.lobbies.get(lobbyId);
+        if (!lobby) {
+            socket.emit('error', { code: 'LOBBY_NOT_FOUND', message: 'Lobby not found.' });
+            return;
+        }
+        if (lobby.hostId !== socket.id) {
+            socket.emit('error', { code: 'NOT_HOST', message: 'Only the host can start the game.' });
+            return;
+        }
+        if (lobby.players.size < 2) {
+            socket.emit('error', { code: 'NOT_ENOUGH_PLAYERS', message: 'Need 2 players to start a game.' });
+            return;
+        }
+        if (!Array.from(lobby.players.values()).every(p => p.ready)) {
+            socket.emit('error', { code: 'NOT_ALL_READY', message: 'All players must be ready to start the game.' });
+            return;
+        }
+        if (lobby.status === 'in-game') {
+            socket.emit('error', { code: 'GAME_ALREADY_STARTED', message: 'Game already in progress.' });
+            return;
+        }
+
+        console.log(`Host ${socket.data.username} explicitly started game in lobby ${lobbyId}.`);
+        this._startGame(io, lobby); // Now, _startGame is only called by host action
+    }
+
+    /**
+     * Host kicks a player from the lobby.
+     * @param {import("socket.io").Server} io
+     * @param {import("socket.io").Socket} hostSocket - The host's socket.
+     * @param {{lobbyId: string, playerId: string}} payload - The lobby ID and player's socket ID to kick.
+     */
+    handleKickPlayer(io, hostSocket, payload) {
+        const { lobbyId, playerId } = payload;
+        const lobby = this.lobbies.get(lobbyId);
+
+        if (!lobby) {
+            hostSocket.emit('error', { code: 'LOBBY_NOT_FOUND', message: 'Lobby not found.' });
+            return;
+        }
+        if (lobby.hostId !== hostSocket.id) {
+            hostSocket.emit('error', { code: 'NOT_HOST', message: 'Only the host can kick players.' });
+            return;
+        }
+        if (playerId === hostSocket.id) {
+            hostSocket.emit('error', { code: 'CANNOT_KICK_SELF', message: 'You cannot kick yourself.' });
+            return;
+        }
+
+        const playerToKick = lobby.players.get(playerId);
+        if (!playerToKick) {
+            hostSocket.emit('error', { code: 'PLAYER_NOT_FOUND', message: 'Player to kick not found in this lobby.' });
+            return;
+        }
+
+        const playerSocketToKick = io.sockets.sockets.get(playerId);
+        if (playerSocketToKick) {
+            this.handleLeave(io, playerSocketToKick); // Use handleLeave for full cleanup
+            playerSocketToKick.emit('message', { type: 'info', text: `You have been kicked from the lobby '${lobby.name}'.` });
+            console.log(`Player ${playerToKick.username} (${playerId}) kicked from lobby ${lobby.id} by host ${hostSocket.data.username}.`);
+            hostSocket.emit('message', { type: 'success', text: `Player ${playerToKick.username} kicked.` });
+        } else {
+            console.warn(`Attempted to kick player ${playerToKick.username} (${playerId}) but their socket was not found. Performing cleanup.`);
+            this.handleLeave(io, { id: playerId, data: { username: playerToKick.username } }); // Simulate leave for cleanup
+            hostSocket.emit('message', { type: 'info', text: `Player ${playerToKick.username} was already disconnected and removed.` });
+        }
+    }
+
+
     publicSummaries() {
         return Array.from(this.lobbies.values())
-            .filter(lobby => lobby.privacy === 'public')
             .map(lobby => ({
                 id: lobby.id,
                 name: lobby.name,
                 hostUsername: lobby.players.get(lobby.hostId)?.username || 'Unknown',
                 playerCount: lobby.players.size,
                 status: lobby.status,
+                privacy: lobby.privacy,
                 createdAt: lobby.createdAt,
                 region: 'LAN'
             }));
     }
 
     _getOtherPlayerColor(lobby, disconnectedSocketId) {
-        const player = lobby.players.get(disconnectedSocketId);
-        if (!player || !player.color) return null;
-        return player.color === 'red' ? 'blue' : 'red';
+        const otherPlayer = Array.from(lobby.players.values()).find(p => p.socketId !== disconnectedSocketId);
+        return otherPlayer ? otherPlayer.color : null;
     }
 }

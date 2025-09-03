@@ -1,95 +1,93 @@
-// dama-main/dama/utils.js
+// dama/client/utils.js
 
+// CRITICAL FIX: Import nanoid from a CDN for browser compatibility
+import { nanoid } from 'https://cdn.jsdelivr.net/npm/nanoid/nanoid.js';
+
+// Board constants (ensure these match server-side logic if applicable)
 export const BOARD_SIZE = 8;
-export const PIECES_PER_PLAYER = 12;
-
 export const PLAYER_RED = 'red';
 export const PLAYER_BLUE = 'blue';
 
+// AI Difficulties (can be expanded)
 export const AI_DIFFICULTY = {
-    EASY: 'easy',
-    MEDIUM: 'medium',
-    HARD: 'hard'
+    EASY: 2,
+    MEDIUM: 4,
+    HARD: 6
 };
 
-export function getOpponent(player) {
+/**
+ * Generates a collision-resistant unique ID.
+ * @param {number} length - The desired length of the ID.
+ * @returns {string}
+ */
+export const generateId = (length = 7) => nanoid(length);
+
+
+/**
+ * Returns the opponent's color.
+ * @param {'red'|'blue'} player
+ * @returns {'red'|'blue'}
+ */
+export const getOpponent = (player) => {
     return player === PLAYER_RED ? PLAYER_BLUE : PLAYER_RED;
-}
+};
+
 
 /**
- * Determines the effective "forward" movement direction for a piece.
- * This depends on whether the piece's color is at the bottom or top of the board.
- * Assumes the 'humanPlayerColor' is always at the bottom (moves up).
- * @param {string} piecePlayerColor - The color of the piece in question.
- * @param {string} humanPlayerColor - The color chosen by the human player (at the bottom).
- * @returns {number} -1 for upwards movement (towards row 0), 1 for downwards movement (towards row BOARD_SIZE - 1).
+ * Determines the logical forward direction for a piece based on the *display perspective*.
+ * In a standard Dama game, pieces move "up" the board towards the opponent.
+ * If the perspective is 'red' (red at bottom), red moves up (-1), blue moves down (+1).
+ * If the perspective is 'blue' (blue at bottom), blue moves up (-1), red moves +1 (down).
+ *
+ * @param {'red'|'blue'} piecePlayer - The actual color of the piece.
+ * @param {'red'|'blue'} displayPerspectiveColor - The color that is displayed at the bottom of the board (this client's perspective).
+ * @returns {number} -1 (up) or 1 (down).
  */
-export function getEffectivePlayerDirection(piecePlayerColor, humanPlayerColor) {
-    // If humanPlayerColor is null (e.g., local 2-player or server hasn't assigned in online)
-    // Red traditionally moves up (towards 0), Blue moves down (towards 7)
-    if (!humanPlayerColor) {
-        return piecePlayerColor === PLAYER_RED ? -1 : 1;
+export const getEffectivePlayerDirection = (piecePlayer, displayPerspectiveColor) => {
+    if (displayPerspectiveColor === PLAYER_RED) {
+        return piecePlayer === PLAYER_RED ? -1 : 1;
+    } else { // displayPerspectiveColor === PLAYER_BLUE
+        return piecePlayer === PLAYER_BLUE ? -1 : 1;
     }
-
-    if (piecePlayerColor === humanPlayerColor) { // If it's the player at the bottom
-        return -1; // Move upwards towards row 0
-    } else { // If it's the player at the top
-        return 1; // Move downwards towards row BOARD_SIZE - 1
-    }
-}
+};
 
 /**
- * Determines the effective promotion row for a piece.
- * This depends on whether the piece's color is at the bottom or top of the board.
- * Assumes the 'humanPlayerColor' is always at the bottom.
- * @param {string} piecePlayerColor - The color of the piece in question.
- * @param {string} humanPlayerColor - The color chosen by the human player (at the bottom).
- * @returns {number} The row index (0 or BOARD_SIZE - 1) where the piece promotes.
+ * Determines the promotion row for a piece based on the *display perspective*.
+ *
+ * @param {'red'|'blue'} piecePlayer - The actual color of the piece.
+ * @param {'red'|'blue'} displayPerspectiveColor - The color that is displayed at the bottom of the board (this client's perspective).
+ * @returns {number} The row index (0 or 7) where a piece promotes.
  */
-export function getEffectivePromotionRow(piecePlayerColor, humanPlayerColor) {
-    if (!humanPlayerColor) {
-        return piecePlayerColor === PLAYER_RED ? 0 : BOARD_SIZE - 1;
+export const getEffectivePromotionRow = (piecePlayer, displayPerspectiveColor) => {
+    if (displayPerspectiveColor === PLAYER_RED) {
+        return piecePlayer === PLAYER_RED ? 0 : 7;
+    } else { // displayPerspectiveColor === PLAYER_BLUE
+        return piecePlayer === PLAYER_BLUE ? 0 : 7;
     }
+};
 
-    if (piecePlayerColor === humanPlayerColor) { // If it's the player at the bottom
-        return 0; // Promote at row 0
-    } else { // If it's the player at the top
-        return BOARD_SIZE - 1; // Promote at row BOARD_SIZE - 1
-    }
-}
+/**
+ * Creates a deep copy of the board array to avoid mutation during AI searches.
+ * @param {Array<Array<object|null>>} board - The 2D board array.
+ * @returns {Array<Array<object|null>>} A deep copy.
+ */
+export const deepCopyBoard = (board) => {
+    return board.map(row => row.map(piece => piece ? { ...piece } : null));
+};
 
-
-// Function to deep copy a board state for AI simulation
-export function deepCopyBoard(board) {
-    const newBoard = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
-    for (let r = 0; r < BOARD_SIZE; r++) {
-        for (let c = 0; c < BOARD_SIZE; c++) {
-            const piece = board[r][c];
-            if (piece) {
-                newBoard[r][c] = {
-                    id: piece.id,
-                    player: piece.player,
-                    row: piece.row,
-                    col: piece.col,
-                    isKing: piece.isKing
-                };
-            }
-        }
-    }
-    return newBoard;
-}
-
-// REMOVED animateMove function completely.
-// Piece movement will now rely on CSS transitions defined in style.css
-// and immediate DOM updates for positioning.
-
+// REMOVED: animateMove function is no longer here.
+/*
+export const animateMove = (pieceElement, startRow, startCol, endRow, endCol, squareSize, resolve) => {
+    // ... animation logic ...
+};
+*/
 
 /**
  * Capitalizes the first letter of a string.
  * @param {string} str
  * @returns {string}
  */
-export function capitalize(str) {
+export const capitalize = (str) => {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
-}
+};

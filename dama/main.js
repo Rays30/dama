@@ -2,7 +2,7 @@
 import * as Utils from './utils.js';
 import { DamaGame } from './game.js'; // Your main game logic class/object
 
-// Corrected import: 'leaveOnlineLobbyConnection' is now the exported function
+// IMPORT initLobbyUI, updateConnectionStatus, leaveOnlineLobbyConnection from lobby.js
 import { initLobbyUI, updateConnectionStatus, leaveOnlineLobbyConnection } from './client/lobby/lobby.js';
 import { getSocket, isSocketConnected, disconnectSocket } from './client/net/socket.js';
 
@@ -38,7 +38,7 @@ const scoreMessage = document.getElementById('score-message');
 const btnRematch = document.getElementById('btn-rematch');
 const btnNewGame = document.getElementById('btn-new-game');
 
-// --- MODAL UI Elements (NEW) ---
+// --- MODAL UI Elements ---
 const modalBackdrop = document.getElementById('modal-backdrop');
 
 // Create Lobby Modal
@@ -46,14 +46,14 @@ const createLobbyModal = document.getElementById('create-lobby-modal');
 const btnCloseCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.close-btn') : null;
 const btnCancelCreateLobby = createLobbyModal ? createLobbyModal.querySelector('.btn-cancel-create-lobby') : null;
 
-// Share Game Code Modal
-const shareGameCodeModal = document.getElementById('share-game-code-modal');
-const btnCloseShareCode = shareGameCodeModal ? shareGameCodeModal.querySelector('.close-btn') : null;
-const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal');
+// Removed: Share Game Code Modal elements, as they are no longer in HTML
+// const shareGameCodeModal = document.getElementById('share-game-code-modal');
+// const btnCloseShareCode = shareGameCodeModal ? shareGameCodeModal.querySelector('.close-btn') : null;
+// const cancelOnlineGameModal = document.getElementById('cancel-online-game-modal');
 
-// NEW: Confirm Back to Menu Modal elements (ensure these match your HTML IDs exactly)
+// Confirm Back to Menu Modal elements
 const confirmBackModal = document.getElementById('confirm-back-modal');
-const btnCloseConfirmBack = confirmBackModal ? confirmBackModal.querySelector('.close-btn') : null; // Access via confirmBackModal
+const btnCloseConfirmBack = confirmBackModal ? confirmBackModal.querySelector('.close-btn') : null;
 const btnConfirmYes = document.getElementById('btn-confirm-yes');
 const btnConfirmNo = document.getElementById('btn-confirm-no');
 
@@ -191,64 +191,73 @@ export function setupGame(mode, playerColor = null, socket = null, lobbyId = nul
     }
 }
 
+// EXPORTED showModal/hideModal functions (now authoritative and robust)
 export function showModal(modalElement) {
-    console.log(`[showModal] Attempting to show modal: ${modalElement ? modalElement.id : 'null'}`);
+    console.log(`[main.js][showModal] Attempting to show modal: ${modalElement ? modalElement.id : 'null'}`);
     if (modalBackdrop && modalElement) {
         modalBackdrop.classList.add('show');
+        modalBackdrop.style.display = 'block'; // Ensure backdrop is displayed
+        modalBackdrop.style.pointerEvents = 'auto'; // Enable interactions for backdrop
+
         modalElement.classList.add('show');
+        modalElement.style.display = 'flex'; // Ensure modal is displayed
+        modalElement.style.pointerEvents = 'auto'; // Enable interactions
+
         document.body.style.overflow = 'hidden';
-        console.log(`[showModal] Modal ${modalElement.id} and backdrop shown.`);
+        console.log(`[main.js][showModal] Modal ${modalElement.id} and backdrop shown.`);
     } else {
-        console.warn("[showModal] Missing modalBackdrop or modalElement. Cannot show modal.");
+        console.warn("[main.js][showModal] Missing modalBackdrop or modalElement. Cannot show modal.");
     }
 }
 
 export function hideModal(modalElement) {
-    console.log(`[hideModal] Attempting to hide modal: ${modalElement ? modalElement.id : 'null'}`);
-    if (modalBackdrop && modalElement) {
-        modalBackdrop.classList.remove('show');
+    console.log(`[main.js][hideModal] Attempting to hide modal: ${modalElement ? modalElement.id : 'null'}`);
+    if (modalElement) {
         modalElement.classList.remove('show');
-        if (!document.querySelector('.modal.show')) { // Only re-enable scrolling if no other modals are open
-            document.body.style.overflow = '';
-        }
-        console.log(`[hideModal] Modal ${modalElement.id} and backdrop hidden.`);
+        // Add a small timeout to allow CSS transitions (opacity) to complete
+        // CRITICAL: Use !important to override any lingering inline/specific styles
+        setTimeout(() => {
+            modalElement.style.setProperty('display', 'none', 'important');
+            modalElement.style.setProperty('pointer-events', 'none', 'important');
+            console.log(`[main.js][hideModal] Modal ${modalElement.id} display set to: ${modalElement.style.display}`);
+        }, 300); // Match this duration with your CSS transition duration
     }
+
+    // Check if ANY other modals are still open before hiding the backdrop and re-enabling scroll
+    // This timeout ensures that the classList.remove takes effect before recounting.
+    setTimeout(() => {
+        const remainingActiveModals = document.querySelectorAll('.modal.show');
+        if (remainingActiveModals.length === 0) {
+            if (modalBackdrop) {
+                modalBackdrop.classList.remove('show');
+                // CRITICAL: Use !important for backdrop as well
+                modalBackdrop.style.setProperty('display', 'none', 'important');
+                modalBackdrop.style.setProperty('pointer-events', 'none', 'important');
+                console.log(`[main.js][hideModal] Backdrop display set to: ${modalBackdrop.style.display}`);
+            }
+            document.body.style.overflow = ''; // Re-enable body scrolling
+            console.log(`[main.js][hideModal] Backdrop hidden, body scroll re-enabled.`);
+        } else {
+            console.log(`[main.js][hideModal] Other modals still active (${remainingActiveModals.length}). Keeping backdrop.`);
+        }
+    }, 300); // Same delay as above
+    console.log(`[main.js][hideModal] Modal ${modalElement ? modalElement.id : 'null'} hidden signal sent.`);
 }
 
-export function showCreateLobbyModal() {
-    console.log("[showCreateLobbyModal] Called.");
-    hideShareGameCodeModal(); // Ensure other modals are closed
-    hideConfirmBackModal(); // Ensure this new modal is also closed
-    showModal(createLobbyModal);
-}
 
-export function hideCreateLobbyModal() {
-    console.log("[hideCreateLobbyModal] Called.");
-    hideModal(createLobbyModal);
-}
+// Removed showCreateLobbyModal, hideCreateLobbyModal, showShareGameCodeModal, hideShareGameCodeModal
+// as lobby.js now uses the exported showModal/hideModal from main.js directly, or handles its own specifics.
 
-export function showShareGameCodeModal() {
-    console.log("[showShareGameCodeModal] Called.");
-    hideCreateLobbyModal(); // Ensure other modals are closed
-    hideConfirmBackModal(); // Ensure this new modal is also closed
-    showModal(shareGameCodeModal);
-}
-
-export function hideShareGameCodeModal() {
-    console.log("[hideShareGameCodeModal] Called.");
-    hideModal(shareGameCodeModal);
-}
 
 // NEW: Helper functions for the confirm back modal
 export function showConfirmBackModal() {
     console.log("[showConfirmBackModal] Called.");
-    hideCreateLobbyModal(); // Ensure other modals are closed
-    hideShareGameCodeModal(); // Ensure other modals are closed
     showModal(confirmBackModal);
 }
 
 export function hideConfirmBackModal() {
     console.log("[hideConfirmBackModal] Called.");
+    // FIX: Corrected typo from confirmBackBackModal to confirmBackModal
     hideModal(confirmBackModal);
 }
 
@@ -258,10 +267,21 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('--- [main.js] DOMContentLoaded fired, starting initialization ---');
 
     // **IMPORTANT ADDITION: Reset all modals at startup**
-    if (modalBackdrop) modalBackdrop.classList.remove('show');
-    if (createLobbyModal) createLobbyModal.classList.remove('show');
-    if (shareGameCodeModal) shareGameCodeModal.classList.remove('show');
-    if (confirmBackModal) confirmBackModal.classList.remove('show'); // NEW: Reset confirm back modal
+    if (modalBackdrop) {
+        modalBackdrop.classList.remove('show');
+        modalBackdrop.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        modalBackdrop.style.setProperty('pointer-events', 'none', 'important');
+    }
+    if (createLobbyModal) {
+        createLobbyModal.classList.remove('show');
+        createLobbyModal.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        createLobbyModal.style.setProperty('pointer-events', 'none', 'important');
+    }
+    if (confirmBackModal) {
+        confirmBackModal.classList.remove('show');
+        confirmBackModal.style.setProperty('display', 'none', 'important'); // Force hide with !important
+        confirmBackModal.style.setProperty('pointer-events', 'none', 'important');
+    }
     document.body.style.overflow = ''; // Ensure body scrolling is re-enabled
     console.log('[DOMContentLoaded] All modals reset to hidden state.');
 
@@ -277,11 +297,11 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  resultScreen:', !!resultScreen);
     console.log('  modalBackdrop:', !!modalBackdrop);
     console.log('  createLobbyModal:', !!createLobbyModal);
-    console.log('  shareGameCodeModal:', !!shareGameCodeModal);
-    console.log('  confirmBackModal:', !!confirmBackModal); // NEW: Log status for confirmBackModal
-    console.log('  btnConfirmYes:', !!btnConfirmYes);     // NEW: Log status for btnConfirmYes
-    console.log('  btnConfirmNo:', !!btnConfirmNo);       // NEW: Log status for btnConfirmNo
-    console.log('  btnCloseConfirmBack:', !!btnCloseConfirmBack); // NEW: Log status for btnCloseConfirmBack
+    console.log('  shareGameCodeModal (expected false):', !!document.getElementById('share-game-code-modal')); // CHECK STATUS
+    console.log('  confirmBackModal:', !!confirmBackModal);
+    console.log('  btnConfirmYes:', !!btnConfirmYes);
+    console.log('  btnConfirmNo:', !!btnConfirmNo);
+    console.log('  btnCloseConfirmBack:', !!btnCloseConfirmBack);
 
 
     damaGame = new DamaGame('board-container', {
@@ -305,10 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSinglePlayer.addEventListener('click', () => {
             console.log('[Click] "Single Player (AI)" button clicked. Showing single-player-menu.');
             showScreen('single-player-menu');
-            // Ensure any open modals are hidden when transitioning to a new screen
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
-            hideConfirmBackModal(); // NEW: Hide confirm modal
+            hideModal(createLobbyModal);
+            hideConfirmBackModal();
             if (difficultySelection) difficultySelection.style.display = 'none';
             if (chosenAiColorSpan) chosenAiColorSpan.textContent = '';
         });
@@ -317,10 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnTwoPlayer) {
         btnTwoPlayer.addEventListener('click', () => {
             console.log('[Click] "2 Players (Local)" button clicked. Setting up local game.');
-            // Ensure any open modals are hidden when transitioning to a new screen
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
-            hideConfirmBackModal(); // NEW: Hide confirm modal
+            hideModal(createLobbyModal);
+            hideConfirmBackModal();
             setupGame('local', Utils.PLAYER_BLUE);
         });
     } else { console.error("ERROR: btnTwoPlayer not found! Cannot attach click listener."); }
@@ -328,10 +344,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnChallengeFriend) {
         btnChallengeFriend.addEventListener('click', () => {
             console.log('[Click] "Challenge a Friend (Online)" button clicked. Showing online-menu.');
-            // Ensure any open modals are hidden when transitioning to a new screen
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
-            hideConfirmBackModal(); // NEW: Hide confirm modal
+            hideModal(createLobbyModal);
+            hideConfirmBackModal();
             showScreen('online-menu');
             initLobbyUI(updateConnectionStatus);
             if (isSocketConnected()) {
@@ -390,21 +404,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showScreen('main-menu');
             currentGameMode = null;
             currentPlayerColor = null;
-            // Ensure any open modals are hidden when returning to main menu
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
-            hideConfirmBackModal(); // NEW: Hide confirm modal
+            hideModal(createLobbyModal);
+            hideConfirmBackModal();
         });
     });
 
     if (btnBackToMenuGame) {
         btnBackToMenuGame.addEventListener('click', () => {
             console.log('[Click] "Back to Menu" (from game) button clicked. Showing confirm modal.');
-            showConfirmBackModal(); // NEW: Show the custom modal instead of confirm()
+            showConfirmBackModal();
         });
     } else { console.warn("WARN: btnBackToMenuGame not found."); }
 
-    // NEW: Event listeners for the Confirm Back to Menu modal
+    // Event listeners for the Confirm Back to Menu modal
     if (btnConfirmYes) {
         btnConfirmYes.addEventListener('click', () => {
             console.log('[Click] "Yes, Abandon" button clicked.');
@@ -412,20 +424,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 getSocket().emit('lobby:leave');
                 disconnectSocket();
             }
-            hideConfirmBackModal(); // Hide modal first
+            hideConfirmBackModal();
             showScreen('main-menu');
             currentGameMode = null;
             currentPlayerColor = null;
-            // Ensure any other modals are hidden
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
+            hideModal(createLobbyModal);
         });
     } else { console.warn("WARN: btnConfirmYes not found!"); }
 
     if (btnConfirmNo) {
         btnConfirmNo.addEventListener('click', () => {
             console.log('[Click] "No, Stay" button clicked.');
-            hideConfirmBackModal(); // Just hide the modal
+            hideConfirmBackModal();
         });
     } else { console.warn("WARN: btnConfirmNo not found!"); }
 
@@ -456,10 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showScreen('main-menu');
             currentGameMode = null;
             currentPlayerColor = null;
-            // Ensure any open modals are hidden
-            hideCreateLobbyModal();
-            hideShareGameCodeModal();
-            hideConfirmBackModal(); // NEW: Hide confirm modal
+            hideModal(createLobbyModal);
+            hideConfirmBackModal();
         });
     } else { console.warn("WARN: btnNewGame not found."); }
 
@@ -471,38 +479,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     } else { console.warn("WARN: btnUndo not found."); }
 
-    // --- MODAL Event Listeners (NEW) ---
-
-    if (btnShowCreateLobby) {
-        btnShowCreateLobby.addEventListener('click', showCreateLobbyModal);
-    } else { console.warn("WARN: btnShowCreateLobby not found!"); }
-
-    if (btnCloseCreateLobby) {
-        btnCloseCreateLobby.addEventListener('click', hideCreateLobbyModal);
-    } else { console.warn("WARN: btnCloseCreateLobby not found!"); }
-
-    if (btnCancelCreateLobby) {
-        btnCancelCreateLobby.addEventListener('click', hideCreateLobbyModal);
-    } else { console.warn("WARN: btnCancelCreateLobby not found!"); }
-
-    if (btnCloseShareCode) {
-        btnCloseShareCode.addEventListener('click', hideShareGameCodeModal);
-    } else { console.warn("WARN: btnCloseShareCode not found!"); }
-
-    if (cancelOnlineGameModal) {
-        cancelOnlineGameModal.addEventListener('click', hideShareGameCodeModal);
-    } else { console.warn("WARN: cancelOnlineGameModal not found!"); }
-
+    // --- MODAL Event Listeners ---
     if (modalBackdrop) {
         modalBackdrop.addEventListener('click', (event) => {
             if (event.target === modalBackdrop) {
                 console.log('[Click] Modal backdrop clicked directly.');
-                if (createLobbyModal && createLobbyModal.classList.contains('show')) {
-                    hideCreateLobbyModal();
-                } else if (shareGameCodeModal && shareGameCodeModal.classList.contains('show')) {
-                    hideShareGameCodeModal();
-                } else if (confirmBackModal && confirmBackModal.classList.contains('show')) {
-                    hideConfirmBackModal();
+                const visibleModals = document.querySelectorAll('.modal.show');
+                if (visibleModals.length > 0) {
+                    const topModal = visibleModals[visibleModals.length - 1];
+                    hideModal(topModal);
                 }
             }
         });

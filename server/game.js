@@ -1,3 +1,5 @@
+// dama/server/game.js
+
 // This simplified server-side game logic only tracks state and validates turns.
 // Full Dama move validation (e.g., can this piece move here, are captures forced)
 // is primarily handled client-side to keep server lightweight as per prompt.
