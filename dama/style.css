@@ -329,6 +329,8 @@ button.back-button:hover {
     display: flex; /* From original */
     justify-content: center; /* From original */
     align-items: center; /* From original */
+     transform: translate(-50%, -50%); /* Adjust for its own size to perfectly center */
+    transition: transform 0.2s ease-out; /* Add transition for smooth movement */
 }
 
 .piece.red { /* UPDATED: Changed from bright red to very dark gray / almost black, and border adjusted */

@@ -1,7 +1,7 @@
 // dama-main/dama/game.js
 
-// REMOVED 'animateMove' from imports as we are now fully CSS-based for movement.
-import { BOARD_SIZE, PLAYER_RED, PLAYER_BLUE, AI_DIFFICULTY, getOpponent, getEffectivePlayerDirection, getEffectivePromotionRow, deepCopyBoard } from './utils.js';
+// IMPORTANT: animateMove is imported from utils.js and expected to be present there.
+import { BOARD_SIZE, PLAYER_RED, PLAYER_BLUE, AI_DIFFICULTY, getOpponent, animateMove, getEffectivePlayerDirection, getEffectivePromotionRow, deepCopyBoard } from './utils.js';
 import { initializeAI } from './ai.js'; // Import the AI factory function
 
 const DRAW_MOVES_THRESHOLD = 40;
@@ -65,7 +65,6 @@ export class DamaGame {
                 pieceEl.classList.add('king');
             }
             pieceEl.dataset.id = this.id;
-            // No need to set data-row/col here initially, updatePosition will handle it
             
             this.element = pieceEl;
             squareElement.appendChild(pieceEl);
@@ -76,10 +75,8 @@ export class DamaGame {
 
         updatePosition() {
             if (this.element) {
-                // CRITICAL: Update data attributes. CSS will handle the visual positioning and transitions.
                 this.element.dataset.row = this.row;
                 this.element.dataset.col = this.col;
-                // Clear any inline transform that might be lingering from previous JS animations
                 this.element.style.transform = ''; 
                 this.element.style.transition = ''; 
             }
@@ -273,7 +270,7 @@ export class DamaGame {
             this.config.onMessage("It's not your turn!", 'red');
             return;
         }
-        if (this.state.currentPlayer !== piece.player) {
+        if (this.state.currentPlayer !== piece.player) { // Allow selecting only own pieces for current turn
             this.config.onMessage(`It's ${this.state.currentPlayer.toUpperCase()}'s turn. Not your piece.`);
             return;
         }
@@ -317,7 +314,8 @@ export class DamaGame {
         this.state.selectedPiece = piece;
         piece.element.classList.add('selected');
 
-        const perspectiveColor = this.state.humanPlayerColor || PLAYER_RED; // Standardize perspective
+        // Perspective for move generation is always humanPlayerColor (or default Red)
+        const perspectiveColor = this.state.humanPlayerColor || PLAYER_RED; 
         
         const moves = this._getValidMovesForPiece(piece, perspectiveColor);
         this.state.mandatoryCaptures = this._findAllMandatoryCaptures(this.state.currentPlayer, perspectiveColor);
@@ -339,6 +337,8 @@ export class DamaGame {
             this.config.onMessage('');
         }
         
+        console.log('Selected piece color:', piece.player); // Debug log
+        console.log('Calculated possible moves:', this.state.possibleMoves); // Debug log
         this._highlightMoves(this.state.possibleMoves);
     }
 
@@ -358,14 +358,21 @@ export class DamaGame {
         const moves = [];
         const isKing = piece.isKing;
         
-        const pieceLogicalDirection = getEffectivePlayerDirection(piece.player, perspectiveColor);
+        // This calculates the piece's logical direction relative to its own color
+        // It's then used by getEffectivePlayerDirection to translate to screen coordinates
+        const pieceLogicalForwardDirection = piece.player === PLAYER_RED ? -1 : 1; 
 
-        const regularMoveRowDirections = [pieceLogicalDirection];
-        const allRowDirections = [-1, 1];
+        // Use the passed perspectiveColor for getEffectivePlayerDirection
+        const effectiveDirection = getEffectivePlayerDirection(piece.player, perspectiveColor);
+
+        // For regular moves, pieces move in their logical forward direction.
+        const regularMoveRowDirections = [effectiveDirection]; 
+        const allRowDirections = [-1, 1]; // Kings can move/capture in any diagonal direction
         const colDirections = [-1, 1];
 
+        // 1. Check for Regular Moves (non-capturing)
         if (!isKing) {
-            for (const dr of regularMoveRowDirections) {
+            for (const dr of regularMoveRowDirections) { // Use effectiveDirection for pawn moves
                 for (const dc of colDirections) {
                     const newRow = piece.row + dr;
                     const newCol = piece.col + dc;
@@ -403,7 +410,8 @@ export class DamaGame {
             }
         }
 
-        for (const dr of allRowDirections) {
+        // 2. Check for Captures
+        for (const dr of allRowDirections) { // For captures, check both directions regardless of pawn/king
             for (const dc of colDirections) {
                 const capturedRow = piece.row + dr;
                 const capturedCol = piece.col + dc;
@@ -466,7 +474,7 @@ export class DamaGame {
         return moves;
     }
 
-    _getAllPlayerMoves(player, perspectiveColor) { // Now takes perspectiveColor
+    _getAllPlayerMoves(player, perspectiveColor) { 
         console.log(`[_getAllPlayerMoves] Calculating moves for player: ${player}. Total pieces in state: ${this.state.pieces.length}, Perspective: ${perspectiveColor}`);
         let allCaptures = [];
         let allRegularMoves = [];
@@ -475,11 +483,11 @@ export class DamaGame {
         for (const piece of this.state.pieces) {
             if (piece.player === player) {
                 playerPiecesFound++;
-                const chains = this._getPieceCaptureChains(deepCopyBoard(this.state.board), piece, [], [], perspectiveColor); // Pass perspective
+                const chains = this._getPieceCaptureChains(deepCopyBoard(this.state.board), piece, [], [], perspectiveColor); 
                 if (chains.length > 0) {
                     allCaptures.push(...chains);
                 }
-                const pieceMoves = this._getValidMovesForPiece(piece, perspectiveColor); // Pass perspective
+                const pieceMoves = this._getValidMovesForPiece(piece, perspectiveColor); 
                 const regularMovesForPiece = pieceMoves.filter(m => m.capturedPieces.length === 0);
                 allRegularMoves.push(...regularMovesForPiece);
             }
@@ -497,11 +505,11 @@ export class DamaGame {
         return allRegularMoves;
     }
 
-    _findAllMandatoryCaptures(player, perspectiveColor) { // Now takes perspectiveColor
+    _findAllMandatoryCaptures(player, perspectiveColor) { 
         return this._getAllPlayerMoves(player, perspectiveColor).filter(move => move.capturedPieces.length > 0);
     }
 
-    _getPieceCaptureChains(currentBoard, piece, currentPath, capturedPieces, perspectiveColor) { // Now takes perspectiveColor
+    _getPieceCaptureChains(currentBoard, piece, currentPath, capturedPieces, perspectiveColor) { 
         const chains = [];
         const isKing = piece.isKing;
         
@@ -686,14 +694,41 @@ export class DamaGame {
                 }
             }
             
-            // --- CSS-BASED MOVEMENT ---
-            // Update piece's JS state (row/col)
+            const squareSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--square-size'));
+            await new Promise(resolve => {
+                if (typeof animateMove === 'function') {
+                    animateMove(piece.element, piece.row, piece.col, step.to.row, step.to.col, squareSize, () => {
+                        const newSquareEl = this.dom.boardContainer.querySelector(
+                            `.square[data-row="${step.to.row}"][data-col="${step.to.col}"]`
+                        );
+                        if (newSquareEl) {
+                            newSquareEl.appendChild(piece.element);
+                            piece.element.style.transform = ""; 
+                            piece.element.style.transition = ""; 
+                        } else {
+                             console.error(`executeMove: Could not find target square for re-parenting piece at (${step.to.row}, ${step.to.col})`);
+                        }
+                        resolve(); 
+                    });
+                } else {
+                    console.warn("animateMove function not found in utils.js. Skipping animation.");
+                    const newSquareEl = this.dom.boardContainer.querySelector(
+                        `.square[data-row="${step.to.row}"][data-col="${step.to.col}"]`
+                    );
+                    if (newSquareEl) {
+                        newSquareEl.appendChild(piece.element);
+                        piece.element.style.transform = ""; 
+                        piece.element.style.transition = ""; 
+                    } else {
+                         console.error(`executeMove: Could not find target square for re-parenting piece without animation at (${step.to.row}, ${step.to.col})`);
+                    }
+                    resolve();
+                }
+            });
+
             piece.row = step.to.row;
             piece.col = step.to.col;
-            // Update data attributes, CSS will transition the piece
             piece.updatePosition(); 
-            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for visual transition
-            // --- END CSS-BASED MOVEMENT ---
 
             if (move.path.length > 1 && step !== move.path[move.path.length - 1]) {
                  await new Promise(resolve => setTimeout(resolve, 100));
@@ -745,7 +780,8 @@ export class DamaGame {
         this._renderPieces();
 
         this.state.currentPlayer = serverCurrentTurn;
-        const perspectiveColor = this.state.humanPlayerColor || PLAYER_RED; // Use human perspective
+        // Apply ChatGPT's recommendation here for consistency:
+        const perspectiveColor = this.state.humanPlayerColor || PLAYER_RED; 
         this.state.mandatoryCaptures = this._findAllMandatoryCaptures(this.state.currentPlayer, perspectiveColor);
 
         this.updateTurnIndicator();
@@ -885,7 +921,6 @@ export class DamaGame {
         const redPawns = redPieces - redKings;
         const bluePawns = bluePieces - blueKings;
 
-        // 1. Check for standard win/loss (no pieces left)
         if (redPieces === 0) {
             this.state.winner = PLAYER_BLUE;
             this.reason = 'no_pieces';
@@ -895,7 +930,6 @@ export class DamaGame {
             this.reason = 'no_pieces';
             console.log("[checkGameEnd] WIN CONDITION: Blue has no pieces. Red wins.");
         } else {
-            // 2. Check for draw condition (only kings left, and no progress for X moves)
             if (redPieces > 0 && bluePieces > 0 && redPawns === 0 && bluePawns === 0) {
                 if (this.state.movesSinceLastCaptureOrPawnMove >= DRAW_MOVES_THRESHOLD) {
                     this.state.winner = 'draw';
@@ -907,7 +941,7 @@ export class DamaGame {
 
             if (!this.state.winner) {
                 console.log(`[checkGameEnd] Checking for legal moves for current player: ${this.state.currentPlayer}`);
-                const perspectiveColor = this.state.humanPlayerColor || PLAYER_RED; // Use human perspective
+                const perspectiveColor = this.state.isOnlineGame ? PLAYER_RED : (this.state.humanPlayerColor || PLAYER_RED);
                 const currentPlayerMoves = this._getAllPlayerMoves(this.state.currentPlayer, perspectiveColor);
                 
                 console.log(`[checkGameEnd] ${this.state.currentPlayer} has ${currentPlayerMoves.length} legal moves.`);

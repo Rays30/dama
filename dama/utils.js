@@ -75,12 +75,58 @@ export const deepCopyBoard = (board) => {
     return board.map(row => row.map(piece => piece ? { ...piece } : null));
 };
 
-// REMOVED: animateMove function is no longer here.
-/*
+/**
+ * Animates a piece moving from one square to another using CSS transforms.
+ * @param {HTMLElement} pieceElement - The DOM element of the piece.
+ * @param {number} startRow - The starting row.
+ * @param {number} startCol - The starting column.
+ * @param {number} endRow - The ending row.
+ * @param {number} endCol - The ending column.
+ * @param {number} squareSize - The calculated size of a board square in pixels.
+ * @param {Function} resolve - Callback to execute when animation is complete.
+ */
 export const animateMove = (pieceElement, startRow, startCol, endRow, endCol, squareSize, resolve) => {
-    // ... animation logic ...
+    // Current position in pixels relative to boardContainer
+    const startX = startCol * squareSize + (squareSize / 2); // Center of square
+    const startY = startRow * squareSize + (squareSize / 2);
+
+    // Target position in pixels relative to boardContainer
+    const endX = endCol * squareSize + (squareSize / 2); // Center of square
+    const endY = endRow * squareSize + (squareSize / 2);
+
+    // Set initial position for animation, centered *within* the starting square
+    // This transform is relative to the piece's natural position (top:50%, left:50% from its square)
+    // We need to calculate the *offset* from its own square's center.
+    // The piece's CSS already centers it within its square.
+    // We want to translate it relative to the board grid.
+
+    // A simpler approach for this animateMove is to let it manipulate the piece directly
+    // and then reset its transform when done.
+
+    // Ensure initial transform is based on its current square's top:50%/left:50%
+    pieceElement.style.transition = `none`; // Temporarily remove transition for immediate snap to start
+    pieceElement.style.transform = `translate(-50%, -50%)`; // Reset to be centered in its square
+    void pieceElement.offsetWidth; // Force reflow
+
+    // Now apply the animation transform to move it relative to its starting point
+    // This transform calculates the delta needed to move it to the *new* square's center
+    const deltaX = (endCol - startCol) * squareSize;
+    const deltaY = (endRow - startRow) * squareSize;
+
+    pieceElement.style.transition = `transform 0.2s ease-out`; // Add transition for smooth animation
+    pieceElement.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+
+
+    const onTransitionEnd = () => {
+        pieceElement.removeEventListener('transitionend', onTransitionEnd);
+        pieceElement.style.transition = ''; // Remove transition style
+        // IMPORTANT: The caller (executeMove) must handle re-parenting and resetting transform to default
+        resolve();
+    };
+
+    pieceElement.addEventListener('transitionend', onTransitionEnd);
 };
-*/
+
 
 /**
  * Capitalizes the first letter of a string.
